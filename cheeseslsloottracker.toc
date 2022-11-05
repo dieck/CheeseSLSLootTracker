@@ -1,0 +1,10 @@
+## Interface: 20503
+## Title: CheeseSLSLootTracker
+## Notes: Loot Tracker Addon for CheeseSLS usage
+## Author: dieck
+## Version: 20221105
+## SavedVariables: CheeseSLSLootTrackerDB
+
+embeds.xml
+
+cheeseslsloottracker.lua
