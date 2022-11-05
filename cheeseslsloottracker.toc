@@ -8,3 +8,9 @@
 embeds.xml
 
 cheeseslsloottracker.lua
+
+locale-deDE.lua
+locale-enUS.lua
+
+comms.lua
+core.lua
