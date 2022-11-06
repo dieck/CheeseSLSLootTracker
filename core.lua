@@ -41,8 +41,8 @@ function CheeseSLSLootTracker:OnInitialize()
 	LibStub("AceConfig-3.0"):RegisterOptionsTable("CheeseSLSLootTracker", self.optionsTable)
 	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("CheeseSLSLootTracker", "CheeseSLSLootTracker")
 
-	self:RegisterChatCommand("cslsclient", "ChatCommand")
-	self:RegisterChatCommand("slsclient", "ChatCommand");
+	self:RegisterChatCommand("cslsloot", "ChatCommand")
+	self:RegisterChatCommand("slsloot", "ChatCommand");
 
 	self:RegisterComm(CheeseSLSLootTracker.commPrefix, "OnCommReceived")
 
@@ -58,6 +58,35 @@ function CheeseSLSLootTracker:OnInitialize()
 	self:RegisterEvent("TRADE_SHOW")
 	self:RegisterEvent("TRADE_CLOSED") -- so most likely this could as well be before last CHAT_MSG_LOOT
 
+	-- prepare list
+
+	if CheeseSLSLootTracker.db.profile.loothistory == nil then
+		CheeseSLSLootTracker.db.profile.loothistory = {}
+	end
+
+	-- trigger GetItemInfo for all items in database
+	-- if you had disconnect / relog, cache needs to be rebuild to avoid having to handle GET_ITEM_INFO_RECEIVED stuff at Boss announcements
+	-- so better to load it here. But only once per itemid.
+	local itemIdList = {}
+	for _, hst in pairs(CheeseSLSLootTracker.db.profile.loothistory) do
+		itemIdList[tonumber(hst["itemId"])] = tonumber(hst["itemId"])
+	end
+	for itemid,id2 in pairs(itemIdList) do
+		GetItemInfo(itemid)
+	end
+
+	-- clean up old "rolled for" entries
+	-- won't show button for anything older than 2 hours anyway
+	if CheeseSLSLootTracker.db.profile.alreadyStarted then
+		local twohoursago = time() - 2*60*60
+		for key,val in pairs(CheeseSLSLootTracker.db.profile.alreadyStarted) do
+			if val < twohoursago then
+				CheeseSLSLootTracker.db.profile.alreadyStarted[key] = nil
+			end
+		end
+	end
+
+	CheeseSLSLootTracker:Print("CheeseSLSLootTracker loaded.")
 end
 
 function CheeseSLSLootTracker:OnEnable()
@@ -73,7 +102,18 @@ local function strlt(s)
 end
 
 function CheeseSLSLootTracker:ChatCommand(inc)
-	if strlt(inc) == "debug" then
+
+	if strlt(inc) == "" then
+
+		if not CheeseSLSLootTracker.lootTrackFrame then
+			CheeseSLSLootTracker.lootTrackFrame = CheeseSLSLootTracker:createLootTrackFrame()
+			if CheeseSLSClient.lootTrackFrame then CheeseSLSClient.lootTrackFrame:Show() end
+		else
+			CheeseSLSLootTracker.lootTrackFrame:Hide()
+			CheeseSLSLootTracker.lootTrackFrame = nil
+		end
+
+	elseif strlt(inc) == "debug" then
 		CheeseSLSLootTracker.db.profile.debugging = not CheeseSLSLootTracker.db.profile.debugging
 		if CheeseSLSLootTracker.db.profile.debugging then
 			CheeseSLSLootTracker:Print("CheeseSLSLootTracker DEBUGGING " .. L["is enabled."])
@@ -82,10 +122,6 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 		end
 
 	else
-
-		if strlt(inc) == "" then
-			CheeseSLSLootTracker.db.profile.enabled = not CheeseSLSLootTracker.db.profile.enabled
-		end
 
 		if (strlt(inc) == "enable") or (strlt(inc) == "enabled") or (strlt(inc) == "on") then
 			CheeseSLSLootTracker.db.profile.enabled = true

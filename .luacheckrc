@@ -1,3 +1,6 @@
+-- notepad++ replacement for "lines contains only whitespace" & "trailing whitespace" (anywhere)
+-- ^(.*)\s\r\n => $1\r\n -- use regexp search mode
+
 std = "lua51"
 max_line_length = false
 exclude_files = {
@@ -31,7 +34,9 @@ ignore = {
 globals = {
 
 	-- CheeseSLSClient
+	"CheeseSLS",
 	"CheeseSLSClient",
+	"CheeseSLSLootTracker",
 
 	-- misc custom
 	"AceGUIWidgetLSMlists",

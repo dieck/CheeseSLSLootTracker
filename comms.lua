@@ -1,5 +1,6 @@
 local L = LibStub("AceLocale-3.0"):GetLocale("CheeseSLSLootTracker", true)
 local AceGUI = LibStub("AceGUI-3.0")
+local deformat = LibStub("LibDeformat-3.0")
 
 -- get information from CheeseSLSLootTracker
 
@@ -21,17 +22,22 @@ function CheeseSLSLootTracker:OnCommReceived(prefix, message, distribution, send
 	end
 
 	if deserialized["command"] == "LOOT_QUEUED" then
-	
+
 		local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", deserialized["itemLink"])
-	
-		local id = tostring(deserialized["queueTime"]) .. "/" .. tostring(itemId) .. "/" .. tostring(deserialized["playerName"]) 
-		CheeseSLSLootTracker.db.profile.loothistory[id] = { itemLink = deserialized["itemLink"], queueTime = deserialized["queueTime"], playerName = deserialized["playerName"] }
-	
-		-- call asynchronous getItemInfo so it's cached later on 
+
+		local id = tostring(deserialized["queueTime"]) .. "/" .. tostring(itemId) .. "/" .. tostring(deserialized["playerName"])
+		CheeseSLSLootTracker.db.profile.loothistory[id] = {
+			itemId = itemId,
+			itemLink = deserialized["itemLink"],
+			queueTime = deserialized["queueTime"],
+			playerName = deserialized["playerName"]
+		}
+
+		-- call asynchronous getItemInfo so it's cached later on
 		GetItemInfo(itemId)
-		
+
 		CheeseSLSLootTracker:Debug("incoming LOOT_QUEUED: " .. deserialized["itemLink"] .. " from " .. deserialized["playerName"])
-		
+
 	end
 
 end
@@ -39,8 +45,8 @@ end
 
 -- send out "new" loot to other CheeseSLSLootTracker
 
-function CheeseSLSLootTracker:sendLootQueued(itemLink, playerName)
-	local commmsg = { command = "LOOT_QUEUED", version = CheeseSLSLootTracker.commVersion, itemLink = itemLink, queueTime = time(), playerName= playerName }
+function CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount)
+	local commmsg = { command = "LOOT_QUEUED", version = CheeseSLSLootTracker.commVersion, itemLink = itemLink, queueTime = time(), playerName= playerName, itemCount = itemCount }
 	CheeseSLSLootTracker:Print(CheeseSLSLootTracker:Serialize(commmsg))
 	CheeseSLSLootTracker:SendCommMessage(CheeseSLSLootTracker.commPrefix, CheeseSLSLootTracker:Serialize(commmsg), "RAID", nil, "BULK")
 end
@@ -60,23 +66,23 @@ function CheeseSLSLootTracker:CHAT_MSG_LOOT(event, text, sender)
 	if CheeseSLSLootTracker.tradeWindow then return end
 
 	-- validation code from MizusRaidTracker, under GPL 3.0, Author Mîzukichan@EU-Antonidas
-	
+
 	-- patterns LOOT_ITEM / LOOT_ITEM_SELF are also valid for LOOT_ITEM_MULTIPLE / LOOT_ITEM_SELF_MULTIPLE - but not the other way around - try these first
 	-- first try: somebody else received multiple loot (most parameters)
 	local playerName, itemLink, itemCount = deformat(text, LOOT_ITEM_MULTIPLE)
-	
+
 	-- next try: somebody else received single loot
 	if (playerName == nil) then
 		itemCount = 1
 		playerName, itemLink = deformat(text, LOOT_ITEM)
 	end
-	
+
 	-- if player == nil, then next try: player received multiple loot
 	if (playerName == nil) then
 		playerName = UnitName("player")
 		itemLink, itemCount = deformat(text, LOOT_ITEM_SELF_MULTIPLE)
 	end
-	
+
 	-- if itemLink == nil, then last try: player received single loot
 	if (itemLink == nil) then
 		itemCount = 1
@@ -84,7 +90,7 @@ function CheeseSLSLootTracker:CHAT_MSG_LOOT(event, text, sender)
 	end
 
 	-- if itemLink == nil, then there was neither a LOOT_ITEM, nor a LOOT_ITEM_SELF message
-	if (itemLink == nil) then 
+	if (itemLink == nil) then
 		-- No valid loot event received.
 		return
 	end
@@ -101,16 +107,16 @@ function CheeseSLSLootTracker:CHAT_MSG_LOOT(event, text, sender)
 		return
 	end
 
-	-- colors: 
+	-- colors:
 	-- if d == "\124cffff8000\124Hitem" then CheeseSLSLootTracker:Print("LEGENDARY") end -- LEGENDARY
 	-- if d == "\124cffa335ee\124Hitem" then CheeseSLSLootTracker:Print("Epic") end -- Epic
 	-- if d == "\124cff0070dd\124Hitem" then CheeseSLSLootTracker:Print("Rare") end -- Rare
 	-- if d == "\124cff1eff00\124Hitem" then CheeseSLSLootTracker:Print("Uncommon") end -- Uncommon
 	-- if d == "\124cffffffff\124Hitem" then CheeseSLSLootTracker:Print("Common") end -- Common
 	-- if d == "\124cff9d9d9d\124Hitem" then CheeseSLSLootTracker:Print("Trash") end -- Greys
-	
+
 	if (d == "\124cffff8000\124Hitem") or (d == "\124cffa335ee\124Hitem") then
-		CheeseSLSLootTracker:sendLootQueued(itemLink, playerName)
+		CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount)
 	end
 
 end
