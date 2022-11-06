@@ -155,7 +155,7 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 
 		CheeseSLSLootTracker.lootTrackFrame = CheeseSLSLootTracker:createLootTrackFrame()
 		if CheeseSLSLootTracker.lootTrackFrame then
-			CheeseSLSLootTracker.lootTrackFrame:Show() 
+			CheeseSLSLootTracker.lootTrackFrame:Show()
 		end
 
 	elseif strlt(inc) == "debug" then
@@ -167,7 +167,7 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 		end
 
 	elseif strlt(inc:sub(0,5)) == "debug" then
-		itemLink = inc:sub(6)
+		local itemLink = inc:sub(6)
 		local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", itemLink)
 		local id = tostring(time()) .. "/" .. tostring(itemId) .. "/" .. UnitName("player")
 		CheeseSLSLootTracker.db.profile.loothistory[id] = {
@@ -198,7 +198,7 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 end
 
 -- helper function: hash table length
-function CheeseSLSLootTracker:htlen(ht) 
+function CheeseSLSLootTracker:htlen(ht)
 	if ht == nil then return nil end
 	local keyset={}
 	for key,val in pairs(ht) do

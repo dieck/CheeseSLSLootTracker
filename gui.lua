@@ -9,14 +9,14 @@ end
 
 function CheeseSLSLootTracker:createLootTrackFrame()
 	-- no current loot? don't create frame
-	if not CheeseSLSLootTracker.db.profile.loothistory then 
+	if not CheeseSLSLootTracker.db.profile.loothistory then
 		CheeseSLSLootTracker:Print("No loot history to show" .. " (nil)")
 		return
 	end
-	if CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) == 0 then 
+	if CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) == 0 then
 		CheeseSLSLootTracker:Print("No loot history to show" .. " (#0)")
 		return
-	end	
+	end
 	-- calculate size and percentages
 
 	local absolutsizes = {
@@ -33,7 +33,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	if (CheeseSLSClient) then	windowwidth = windowwidth + absolutsizes["btnalert"] + absolutsizes["btnx"] + absolutsizes["btnignore"] end
 	if (CheeseSLS) then	windowwidth = windowwidth + absolutsizes["btnstartbid"] end
 	local relativewidth = {
-		timestamp = round(absolutsizes["timestamp"]/windowwidth,2),	
+		timestamp = round(absolutsizes["timestamp"]/windowwidth,2),
 		icon = round(absolutsizes["icon"]/windowwidth,2),
 		item = round(absolutsizes["item"]/windowwidth,2),
 		player = round(absolutsizes["player"]/windowwidth,2),
@@ -83,42 +83,42 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	for historyid,loot in pairs(CheeseSLSLootTracker.db.profile.loothistory) do
 		tinsert(keyset, historyid)
 	end
-	
+
 	-- id = tostring(deserialized["queueTime"]) .. "/" .. tostring(itemId) .. "/" .. tostring(deserialized["playerName"])
-	table.sort(keyset, function(a,b) 
+	table.sort(keyset, function(a,b)
 		local aTime, _, _ = strsplit("/", a)
 		local bTime, _, _ = strsplit("/", b)
 		return (tonumber(aTime) < tonumber(bTime))
 	end)
 
 	local twohoursago = time() - 2*60*60
-	
+
 	local counthidden = 0
-	
+
 	-- keyset is now sorted in DESCENDING TIME
 	for i = 1, #keyset do
-		historyid = keyset[i]
-		loot = CheeseSLSLootTracker.db.profile.loothistory[ historyid ]
+		local historyid = keyset[i]
+		local loot = CheeseSLSLootTracker.db.profile.loothistory[ historyid ]
 
 		if CheeseSLSLootTracker.db.profile.deletetwohour and tonumber(loot["queueTime"]) < twohoursago then
 			-- remove loot history if requested
 			CheeseSLSLootTracker.db.profile.loothistory[historyid] = nil
-			
+
 			-- wtf, LUA has no continue or next statement? They REALLY want you to use GOTO?
 			-- https://stackoverflow.com/questions/3524970/why-does-lua-have-no-continue-statement
 			-- no, not going to do that. I'll work with if/else then...
 			-- can't show list entry - it's not there anymore (here would be a "continue" statement...)
 		elseif CheeseSLSLootTracker.db.profile.limittwohour and tonumber(loot["queueTime"]) < twohoursago then
 			counthidden = counthidden + 1
-			-- show nothing. (here would be a "continue" statement...) 
+			-- show nothing. (here would be a "continue" statement...)
 		else
-			-- show list entry 
-			
+			-- show list entry
+
 			local itemLink = loot["itemLink"]
 			local itemId = tonumber(loot["itemId"])
 			local _, _, _, _, _, _, _, _, _, itemTexture, _ = GetItemInfo(itemId)
 			local timestamp = date("%H:%M", loot["queueTime"])
-		
+
 			local lbTime = AceGUI:Create("InteractiveLabel")
 			lbTime:SetText(timestamp)
 			lbTime:SetRelativeWidth(relativewidth["timestamp"])
@@ -177,7 +177,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 					-- don't just go for one, go for ALL buttons with the same itemId
 					for key,val in pairs(CheeseSLSLootTracker.lootTrackFrameButtons) do
 						if key:sub(0,8) == "btnAlert" then
-							local _,iid,_ = strsplit("/", key)							
+							local _,iid,_ = strsplit("/", key)
 							if tonumber(iid) == tonumber(widget.itemId) then
 								CheeseSLSLootTracker.lootTrackFrameButtons[key]:SetDisabled(true)
 							end
@@ -198,13 +198,13 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 					-- don't just go for one, go for ALL buttons with the same itemId
 					for key,val in pairs(CheeseSLSLootTracker.lootTrackFrameButtons) do
 						if key:sub(0,8) == "btnAlert" then
-							local _,iid,_ = strsplit("/", key)							
+							local _,iid,_ = strsplit("/", key)
 							if tonumber(iid) == tonumber(widget.itemId) then
 								CheeseSLSLootTracker.lootTrackFrameButtons[key]:SetDisabled(false)
 							end
 						end
 						if key:sub(0,9) == "btnIgnore" then
-							local _,iid,_ = strsplit("/", key)							
+							local _,iid,_ = strsplit("/", key)
 							if tonumber(iid) == tonumber(widget.itemId) then
 								CheeseSLSLootTracker.lootTrackFrameButtons[key]:SetDisabled(false)
 							end
@@ -226,7 +226,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 					-- don't just go for one, go for ALL buttons with the same itemId
 					for key,val in pairs(CheeseSLSLootTracker.lootTrackFrameButtons) do
 						if key:sub(0,9) == "btnIgnore" then
-							local _,iid,_ = strsplit("/", key)							
+							local _,iid,_ = strsplit("/", key)
 							if tonumber(iid) == tonumber(widget.itemId) then
 								CheeseSLSLootTracker.lootTrackFrameButtons[key]:SetDisabled(true)
 							end
