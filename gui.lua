@@ -13,6 +13,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	-- calculate size and percentages
 
 	local absolutsizes = {
+		timestamp = 10,
 		icon = 30,
 		item = 100,
 		player = 70,
@@ -24,6 +25,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	if (CheeseSLSClient) then	windowwidth = windowwidth + absolutsizes["btnalert"] + absolutsizes["btnignore"] end
 	if (CheeseSLS) then	windowwidth = windowwidth + absolutsizes["btnstartbid"] end
 	local relativewidth = {
+		icon = round(absolutsizes["timestamp"]/windowwidth,2),	
 		icon = round(absolutsizes["icon"]/windowwidth,2),
 		item = round(absolutsizes["item"]/windowwidth,2),
 		player = round(absolutsizes["player"]/windowwidth,2),
@@ -67,11 +69,33 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 			if not CheeseSLSClient.db.profile.ignorelist then CheeseSLSClient.db.profile.ignorelist = {} end
 	end
 
+	-- sort loot history
+	local keyset={}
 	for historyid,loot in pairs(CheeseSLSLootTracker.db.profile.loothistory) do
+		tinsert(keyset, historyid)
+	end
+	
+	-- id = tostring(deserialized["queueTime"]) .. "/" .. tostring(itemId) .. "/" .. tostring(deserialized["playerName"])
+	table.sort(keyset, function(a,b) 
+		local aTime, _, _ = strsplit("/", a)
+		local bTime, _, _ = strsplit("/", b)
+		return (tonumber(aTime) < tonumber(bTime))
+	end)
+
+	-- keyset is now sorted in DESCENDING TIME
+	for historyid in keyset do
+		loot = CheeseSLSLootTracker.db.profile.loothistory[historyid]
 
 		local itemLink = loot["itemLink"]
 		local itemId = tonumber(loot["itemId"])
 		local _, _, _, _, _, _, _, _, _, itemTexture, _ = GetItemInfo(itemId)
+		local timestamp = os.date("%H:%M", loot["queueTime"])
+	
+	#
+		local lbTime = AceGUI:Create("InteractiveLabel")
+		lbTime:SetText(timestamp)
+		lbItem:SetRelativeWidth(relativewidth["timestamp"])
+		s:AddChild(lbItem)
 
 		-- TODO: See if we get issues that icons are not available. That would be caching issues,
 		-- but we are starting GetItemInfo early this time, on addon load or on receive over comms.
