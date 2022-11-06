@@ -6,35 +6,44 @@ local function round(num, numDecimalPlaces)
 	return math.floor(num * mult + 0.5) / mult
 end
 
+
 function CheeseSLSLootTracker:createLootTrackFrame()
 	-- no current loot? don't create frame
-	if not CheeseSLSLootTracker.db.profile.loothistory then return end
-	if #CheeseSLSLootTracker.db.profile.loothistory == 0 then return end
+	if not CheeseSLSLootTracker.db.profile.loothistory then 
+		CheeseSLSLootTracker:Print("No loot history to show" .. " (nil)")
+		return
+	end
+	if CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) == 0 then 
+		CheeseSLSLootTracker:Print("No loot history to show" .. " (#0)")
+		return
+	end	
 	-- calculate size and percentages
 
 	local absolutsizes = {
-		timestamp = 10,
-		icon = 30,
-		item = 100,
+		timestamp = 40,
+		icon = 25,
+		item = 120,
 		player = 70,
-		btnalert = 50,
-		btnignore = 50,
-		btnstartbid = 50
+		btnalert = 75,
+		btnx = 45,
+		btnignore = 75,
+		btnstartbid = 110,
 	}
-	local windowwidth = absolutsizes["icon"] + absolutsizes["item"] + absolutsizes["player"]
-	if (CheeseSLSClient) then	windowwidth = windowwidth + absolutsizes["btnalert"] + absolutsizes["btnignore"] end
+	local windowwidth = absolutsizes["timestamp"] + absolutsizes["icon"] + absolutsizes["item"] + absolutsizes["player"]
+	if (CheeseSLSClient) then	windowwidth = windowwidth + absolutsizes["btnalert"] + absolutsizes["btnx"] + absolutsizes["btnignore"] end
 	if (CheeseSLS) then	windowwidth = windowwidth + absolutsizes["btnstartbid"] end
 	local relativewidth = {
-		icon = round(absolutsizes["timestamp"]/windowwidth,2),	
+		timestamp = round(absolutsizes["timestamp"]/windowwidth,2),	
 		icon = round(absolutsizes["icon"]/windowwidth,2),
 		item = round(absolutsizes["item"]/windowwidth,2),
 		player = round(absolutsizes["player"]/windowwidth,2),
 		btnalert = round(absolutsizes["btnalert"]/windowwidth,2),
+		btnx = round(absolutsizes["btnx"]/windowwidth,2),
 		btnignore = round(absolutsizes["btnignore"]/windowwidth,2),
 		btnstartbid = round(absolutsizes["btnstartbid"]/windowwidth,2),
 	}
 
-	local windowheight = min( 700,  75 + 25 * #CheeseSLSLootTracker.db.profile.loothistory )
+	local windowheight = min( 700,  75 + 25 * CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) )
 
 	local f = AceGUI:Create("Window")
 	f:SetTitle("SLS Loot History")
@@ -65,8 +74,8 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	if not CheeseSLSLootTracker.db.profile.alreadyStarted then CheeseSLSLootTracker.db.profile.alreadyStarted = {} end
 
 	if CheeseSLSClient then
-			if not CheeseSLSClient.db.profile.alertlist then CheeseSLSClient.db.profile.alertlist = {} end
-			if not CheeseSLSClient.db.profile.ignorelist then CheeseSLSClient.db.profile.ignorelist = {} end
+		if not CheeseSLSClient.db.profile.alertlist then CheeseSLSClient.db.profile.alertlist = {} end
+		if not CheeseSLSClient.db.profile.ignorelist then CheeseSLSClient.db.profile.ignorelist = {} end
 	end
 
 	-- sort loot history
@@ -82,118 +91,197 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 		return (tonumber(aTime) < tonumber(bTime))
 	end)
 
-	-- keyset is now sorted in DESCENDING TIME
-	for historyid in keyset do
-		loot = CheeseSLSLootTracker.db.profile.loothistory[historyid]
-
-		local itemLink = loot["itemLink"]
-		local itemId = tonumber(loot["itemId"])
-		local _, _, _, _, _, _, _, _, _, itemTexture, _ = GetItemInfo(itemId)
-		local timestamp = os.date("%H:%M", loot["queueTime"])
+	local twohoursago = time() - 2*60*60
 	
-	#
-		local lbTime = AceGUI:Create("InteractiveLabel")
-		lbTime:SetText(timestamp)
-		lbItem:SetRelativeWidth(relativewidth["timestamp"])
-		s:AddChild(lbItem)
+	local counthidden = 0
+	
+	-- keyset is now sorted in DESCENDING TIME
+	for i = 1, #keyset do
+		historyid = keyset[i]
+		loot = CheeseSLSLootTracker.db.profile.loothistory[ historyid ]
 
-		-- TODO: See if we get issues that icons are not available. That would be caching issues,
-		-- but we are starting GetItemInfo early this time, on addon load or on receive over comms.
-		-- So I assume this shouldn't happen. If it does:
-		-- * introduce a store variable for the icon,
-		-- * turn on RegisterEvent("GET_ITEM_INFO_RECEIVED"),
-		-- * update icon when texture is in
+		if CheeseSLSLootTracker.db.profile.deletetwohour and tonumber(loot["queueTime"]) < twohoursago then
+			-- remove loot history if requested
+			CheeseSLSLootTracker.db.profile.loothistory[historyid] = nil
+			
+			-- wtf, LUA has no continue or next statement? They REALLY want you to use GOTO?
+			-- https://stackoverflow.com/questions/3524970/why-does-lua-have-no-continue-statement
+			-- no, not going to do that. I'll work with if/else then...
+			-- can't show list entry - it's not there anymore (here would be a "continue" statement...)
+		elseif CheeseSLSLootTracker.db.profile.limittwohour and tonumber(loot["queueTime"]) < twohoursago then
+			counthidden = counthidden + 1
+			-- show nothing. (here would be a "continue" statement...) 
+		else
+			-- show list entry 
+			
+			local itemLink = loot["itemLink"]
+			local itemId = tonumber(loot["itemId"])
+			local _, _, _, _, _, _, _, _, _, itemTexture, _ = GetItemInfo(itemId)
+			local timestamp = date("%H:%M", loot["queueTime"])
+		
+			local lbTime = AceGUI:Create("InteractiveLabel")
+			lbTime:SetText(timestamp)
+			lbTime:SetRelativeWidth(relativewidth["timestamp"])
+			s:AddChild(lbTime)
 
-		local lbIcon = AceGUI:Create("Icon")
-		lbIcon:SetRelativeWidth(relativewidth["icon"])
-		lbIcon:SetImage(itemTexture)
-		lbIcon:SetImageSize(35,35)
-		lbIcon:SetCallback("OnEnter", function(widget)
-			GameTooltip:SetOwner(widget.frame, "ANCHOR_TOPRIGHT")
-			GameTooltip:SetHyperlink(itemLink)
-			GameTooltip:Show()
-		end)
-		lbIcon:SetCallback("OnLeave", function(widget)
-			GameTooltip:Hide()
-		end)
-		s:AddChild(lbIcon)
+			-- TODO: See if we get issues that icons are not available. That would be caching issues,
+			-- but we are starting GetItemInfo early this time, on addon load or on receive over comms.
+			-- So I assume this shouldn't happen. If it does:
+			-- * introduce a store variable for the icon,
+			-- * turn on RegisterEvent("GET_ITEM_INFO_RECEIVED"),
+			-- * update icon when texture is in
 
-		local lbItem = AceGUI:Create("InteractiveLabel")
-		lbItem:SetText(itemLink)
-		lbItem:SetRelativeWidth(relativewidth["item"])
-		s:AddChild(lbItem)
+			local lbIcon = AceGUI:Create("Icon")
+			lbIcon:SetRelativeWidth(relativewidth["icon"])
+			lbIcon:SetImage(itemTexture)
+			lbIcon:SetImageSize(15,15)
+			lbIcon:SetCallback("OnEnter", function(widget)
+				GameTooltip:SetOwner(widget.frame, "ANCHOR_TOPRIGHT")
+				GameTooltip:SetHyperlink(itemLink)
+				GameTooltip:Show()
+			end)
+			lbIcon:SetCallback("OnLeave", function(widget)
+				GameTooltip:Hide()
+			end)
+			s:AddChild(lbIcon)
 
-		local lbPlayer = AceGUI:Create("InteractiveLabel")
-		lbPlayer:SetText(loot["playerName"])
-		lbPlayer:SetRelativeWidth(relativewidth["player"])
-		s:AddChild(lbPlayer)
+			local lbItem = AceGUI:Create("InteractiveLabel")
+			lbItem:SetText(itemLink)
+			lbItem:SetRelativeWidth(relativewidth["item"])
+			lbItem:SetCallback("OnEnter", function(widget)
+				GameTooltip:SetOwner(widget.frame, "ANCHOR_TOPRIGHT")
+				GameTooltip:SetHyperlink(itemLink)
+				GameTooltip:Show()
+			end)
+			lbItem:SetCallback("OnLeave", function(widget)
+				GameTooltip:Hide()
+			end)
+			s:AddChild(lbItem)
 
-		if (CheeseSLSClient) then
-			local btnAlert = AceGUI:Create("Button")
-			CheeseSLSLootTracker.lootTrackFrameButtons["btnAlert" .. historyid] = btnAlert
-			btnAlert:SetRelativeWidth(relativewidth["btnalert"])
-			if CheeseSLSClient.db.profile.alertlist[itemId] then
-				btnAlert:SetText("Disable Alert")
-			else
-				btnAlert:SetText("Enable Alert")
+			local lbPlayer = AceGUI:Create("InteractiveLabel")
+			lbPlayer:SetText(loot["playerName"])
+			lbPlayer:SetRelativeWidth(relativewidth["player"])
+			s:AddChild(lbPlayer)
+
+			if (CheeseSLSClient) then
+				local btnAlert = AceGUI:Create("Button")
+				btnAlert.historyid = historyid
+				btnAlert.itemId = itemId
+				CheeseSLSLootTracker.lootTrackFrameButtons["btnAlert" .. historyid] = btnAlert
+				btnAlert:SetRelativeWidth(relativewidth["btnalert"])
+				btnAlert:SetDisabled(CheeseSLSClient.db.profile.alertlist[itemId])
+				btnAlert:SetText("Alert")
+				btnAlert:SetCallback("OnClick", function(widget)
+					CheeseSLSClient.db.profile.alertlist[widget.itemId] = time()
+
+					-- don't just go for one, go for ALL buttons with the same itemId
+					for key,val in pairs(CheeseSLSLootTracker.lootTrackFrameButtons) do
+						if key:sub(0,8) == "btnAlert" then
+							local _,iid,_ = strsplit("/", key)							
+							if tonumber(iid) == tonumber(widget.itemId) then
+								CheeseSLSLootTracker.lootTrackFrameButtons[key]:SetDisabled(true)
+							end
+						end
+					end
+				end)
+				s:AddChild(btnAlert)
+
+				local btnX = AceGUI:Create("Button")
+				btnX.historyid = historyid
+				btnX.itemId = itemId
+				CheeseSLSLootTracker.lootTrackFrameButtons["btnX" .. historyid] = btnX
+				btnX:SetRelativeWidth(relativewidth["btnx"])
+				btnX:SetText("x")
+				btnX:SetCallback("OnClick", function(widget)
+					CheeseSLSClient.db.profile.alertlist[widget.itemId] = nil
+					CheeseSLSClient.db.profile.ignorelist[widget.itemId] = nil
+					-- don't just go for one, go for ALL buttons with the same itemId
+					for key,val in pairs(CheeseSLSLootTracker.lootTrackFrameButtons) do
+						if key:sub(0,8) == "btnAlert" then
+							local _,iid,_ = strsplit("/", key)							
+							if tonumber(iid) == tonumber(widget.itemId) then
+								CheeseSLSLootTracker.lootTrackFrameButtons[key]:SetDisabled(false)
+							end
+						end
+						if key:sub(0,9) == "btnIgnore" then
+							local _,iid,_ = strsplit("/", key)							
+							if tonumber(iid) == tonumber(widget.itemId) then
+								CheeseSLSLootTracker.lootTrackFrameButtons[key]:SetDisabled(false)
+							end
+						end
+					end
+				end)
+				s:AddChild(btnX)
+
+				local btnIgnore = AceGUI:Create("Button")
+				btnIgnore.historyid = historyid
+				btnIgnore.itemId = itemId
+				CheeseSLSLootTracker.lootTrackFrameButtons["btnIgnore" .. historyid] = btnIgnore
+				btnIgnore:SetDisabled(CheeseSLSClient.db.profile.ignorelist[itemId])
+				btnIgnore:SetText("Ignore")
+				btnIgnore:SetRelativeWidth(relativewidth["btnignore"])
+				btnIgnore:SetCallback("OnClick", function(widget)
+					CheeseSLSClient.db.profile.ignorelist[widget.itemId] = time()
+
+					-- don't just go for one, go for ALL buttons with the same itemId
+					for key,val in pairs(CheeseSLSLootTracker.lootTrackFrameButtons) do
+						if key:sub(0,9) == "btnIgnore" then
+							local _,iid,_ = strsplit("/", key)							
+							if tonumber(iid) == tonumber(widget.itemId) then
+								CheeseSLSLootTracker.lootTrackFrameButtons[key]:SetDisabled(true)
+							end
+						end
+					end
+				end)
+				s:AddChild(btnIgnore)
 			end
-			btnAlert:SetCallback("OnClick", function()
-				CheeseSLSClient.db.profile.alertlist[itemId] = not CheeseSLSClient.db.profile.alertlist[itemId]
 
-				if CheeseSLSClient.db.profile.alertlist[itemId] then
-					CheeseSLSLootTracker.lootTrackFrameButtons["btnAlert" .. historyid]:SetText("Disable Alert")
-					-- you just enabled Alarm, so don't ignore
-					CheeseSLSClient.db.profile.ignorelist[itemId] = false
-					CheeseSLSLootTracker.lootTrackFrameButtons["btnIgnore" .. historyid]:SetText("Enable Ignore")
-				else
-					CheeseSLSLootTracker.lootTrackFrameButtons["btnAlert" .. historyid]:SetText("Enable Alert")
-					-- you just disabled Alarm, don't care what happened to ignore
+			if (CheeseSLS) then
+				local btnStart = AceGUI:Create("Button")
+				btnStart.historyid = historyid
+				btnStart.itemLink = itemLink
+				btnStart.holdingPlayer = loot["playerName"]
+				CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. historyid] = btnStart
+				btnStart:SetText("SLS bidding")
+				btnStart:SetRelativeWidth(relativewidth["btnstartbid"])
+				btnStart:SetCallback("OnClick", function(widget)
+					if CheeseSLS:StartBidding(widget.itemLink, widget.holdingPlayer) then
+						CheeseSLSLootTracker.db.profile.alreadyStarted[widget.historyid] = time()
+						CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. widget.historyid]:SetDisabled(true)
+					end
+				end)
+				-- don't enable if already used
+				if CheeseSLSLootTracker.db.profile.alreadyStarted[historyid] then
+					btnStart:SetDisabled(true)
 				end
-			end)
-			s:AddChild(btnAlert)
-
-			local btnIgnore = AceGUI:Create("Button")
-			CheeseSLSLootTracker.lootTrackFrameButtons["btnAlert" .. historyid] = btnIgnore
-			if CheeseSLSClient.db.profile.ignorelist[itemId] then
-				btnIgnore:SetText("Disable Ignore")
-			else
-				btnIgnore:SetText("Enable Ignore")
+				s:AddChild(btnStart)
 			end
-			btnIgnore:SetRelativeWidth(relativewidth["btnignore"])
-			btnIgnore:SetCallback("OnClick", function()
-				CheeseSLSClient.db.profile.ignorelist[itemId] = not CheeseSLSClient.db.profile.ignorelist[itemId]
 
-				if CheeseSLSClient.db.profile.ignorelist[itemId] then
-					CheeseSLSLootTracker.lootTrackFrameButtons["btnIgnore" .. historyid]:SetText("Disable Ignore")
-					-- you just enabled Ignore, so don't alert
-					CheeseSLSClient.db.profile.alertlist[itemId] = false
-					CheeseSLSLootTracker.lootTrackFrameButtons["btnAlert" .. historyid]:SetText("Enable Alert")
-				else
-					CheeseSLSLootTracker.lootTrackFrameButtons["btnIgnore" .. historyid]:SetText("Enable Ignore")
-					-- you just disabled Ignore, don't care what happened to alarm
-				end
-			end)
-			s:AddChild(btnIgnore)
-		end
-
-		if (CheeseSLS) then
-			local btnStart = AceGUI:Create("Button")
-			CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. historyid] = btnStart
-			btnStart:SetText("Start Bids")
-			btnStart:SetRelativeWidth(relativewidth["btnstartbid"])
-			btnStart:SetCallback("OnClick", function()
-				CheeseSLS:StartBidding(itemLink)
-				CheeseSLSLootTracker.db.profile.alreadyStarted[historyid] = time()
-				CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. historyid]:SetDisable(true)
-			end)
-			-- don't enable if already used
-			if CheeseSLSLootTracker.db.profile.alreadyStarted[historyid] then
-				btnStart:SetDisable(true)
-			end
-			s:AddChild(btnStart)
-		end
-
+		end -- "if,then,else" used instead of a simple "continue" that's missing in lua
 	end --for
+
+	if counthidden > 0 then
+		local lbBlankspace = AceGUI:Create("InteractiveLabel")
+		lbBlankspace:SetText()
+		lbBlankspace:SetRelativeWidth(0.10)
+		s:AddChild(lbBlankspace)
+
+		local lbCntHidden = AceGUI:Create("InteractiveLabel")
+		lbCntHidden:SetText(tostring(counthidden) .. " hidden entries.")
+		lbCntHidden:SetRelativeWidth(0.25)
+		s:AddChild(lbCntHidden)
+
+		local btnLimitConfig = AceGUI:Create("Button")
+		btnLimitConfig:SetText("Disable limiting to 2 hours")
+		btnLimitConfig:SetRelativeWidth(0.65)
+		btnLimitConfig:SetCallback("OnClick", function(widget)
+			CheeseSLSLootTracker.db.profile.limittwohour = false
+			CheeseSLSLootTracker.lootTrackFrame:Hide()
+			CheeseSLSLootTracker.lootTrackFrame = CheeseSLSLootTracker:createLootTrackFrame()
+			if CheeseSLSLootTracker.lootTrackFrame then CheeseSLSLootTracker.lootTrackFrame:Show() end
+		end)
+		s:AddChild(btnLimitConfig)
+	end
 
 	return f
 end
