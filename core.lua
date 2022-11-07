@@ -3,6 +3,8 @@ local L = LibStub("AceLocale-3.0"):GetLocale("CheeseSLSLootTracker", true)
 CheeseSLSLootTracker.commPrefix = "CheeseSLS-1.0-"
 CheeseSLSLootTracker.commVersion = 20221103
 
+CheeseSLSLootTracker.commPrefixGSDKP = "GSDKPCSLS-1"
+
 local defaults = {
 	profile = {
 		enabled = true,
@@ -93,7 +95,8 @@ function CheeseSLSLootTracker:OnInitialize()
 	self:RegisterChatCommand("slsloot", "ChatCommand");
 
 	self:RegisterComm(CheeseSLSLootTracker.commPrefix, "OnCommReceived")
-
+	self:RegisterComm(CheeseSLSLootTracker.commPrefixGSDKP, "OnCommReceivedGSDKP")
+	
 	self:RegisterEvent("CHAT_MSG_LOOT")
 
 	-- self:RegisterEvent("LOOT_OPENED")

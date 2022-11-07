@@ -13,5 +13,6 @@ locale-deDE.lua
 locale-enUS.lua
 
 comms.lua
+comms-gsdkp.lua
 gui.lua
 core.lua
