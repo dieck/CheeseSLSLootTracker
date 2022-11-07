@@ -75,7 +75,7 @@ CheeseSLSLootTracker.optionsTable = {
 		clearloot = {
 			order = 50,
 			name = "Clear loot table",
-			desc = "Numer of loot items stored in DB",
+			desc = "Number of loot items stored in DB",
 			type = "execute",
 			confirm = true,
 			func = function(info) CheeseSLSLootTracker.db.profile.loothistory = {} end,
