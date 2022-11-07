@@ -21,9 +21,18 @@ function CheeseSLSLootTracker:OnCommReceived(prefix, message, distribution, send
 		return
 	end
 
+	-- ignore commands we don't handle here
+	if d["command"] == "BIDDING_START" then return end
+	if d["command"] == "BIDDING_STOP" then return end
+	if d["command"] == "GOT_ROLL" then return end
+	if d["command"] == "GOT_FIX" then return end
+	if d["command"] == "GOT_FULL" then return end
+	
 	if CheeseSLSLootTracker.commUUIDseen[d["uuid"]] then
 		CheeseSLSLootTracker:Debug("received comm " .. d["uuid"] .. ": already seen, ignoring " .. d["command"] .. " from " .. sender)
 		return
+	else
+		CheeseSLSLootTracker:Debug("received comm " .. d["uuid"] .. ": " .. d["command"] .. " from " .. sender)
 	end
 
 	CheeseSLSLootTracker.commUUIDseen[d["uuid"]] = d["uuid"]
@@ -53,9 +62,9 @@ end
 
 -- send out "new" loot to other CheeseSLSLootTracker
 
-function CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount, queueTime, uu)
+function CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount, queueTime, uuid)
 	local queueT = queueTime or time()
-	local uuid = uu or CheeseSLSLootTracker:UUID()
+	local uu = uuid or CheeseSLSLootTracker:UUID()
 	local commmsg = {
 		command = "LOOT_QUEUED",
 		version = CheeseSLSLootTracker.commVersion,
