@@ -1,9 +1,9 @@
 local L = LibStub("AceLocale-3.0"):GetLocale("CheeseSLSLootTracker", true)
 local AceGUI = LibStub("AceGUI-3.0")
 
-local function round(num, numDecimalPlaces)
+local function roundFloored(num, numDecimalPlaces)
 	local mult = 10^(numDecimalPlaces or 0)
-	return math.floor(num * mult + 0.5) / mult
+	return math.floor(num * mult) / mult
 end
 
 
@@ -20,27 +20,27 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	-- calculate size and percentages
 
 	local absolutsizes = {
-		timestamp = 40,
+		timestamp = 35,
 		icon = 25,
-		item = 120,
+		item = 150,
 		player = 70,
 		btnalert = 75,
 		btnx = 45,
 		btnignore = 75,
-		btnstartbid = 110,
+		btnstartbid = 90,
 	}
 	local windowwidth = absolutsizes["timestamp"] + absolutsizes["icon"] + absolutsizes["item"] + absolutsizes["player"]
 	if (CheeseSLSClient) then	windowwidth = windowwidth + absolutsizes["btnalert"] + absolutsizes["btnx"] + absolutsizes["btnignore"] end
 	if (CheeseSLS) then	windowwidth = windowwidth + absolutsizes["btnstartbid"] end
 	local relativewidth = {
-		timestamp = round(absolutsizes["timestamp"]/windowwidth,2),
-		icon = round(absolutsizes["icon"]/windowwidth,2),
-		item = round(absolutsizes["item"]/windowwidth,2),
-		player = round(absolutsizes["player"]/windowwidth,2),
-		btnalert = round(absolutsizes["btnalert"]/windowwidth,2),
-		btnx = round(absolutsizes["btnx"]/windowwidth,2),
-		btnignore = round(absolutsizes["btnignore"]/windowwidth,2),
-		btnstartbid = round(absolutsizes["btnstartbid"]/windowwidth,2),
+		timestamp = roundFloored(absolutsizes["timestamp"]/windowwidth,2),
+		icon = roundFloored(absolutsizes["icon"]/windowwidth,2),
+		item = roundFloored(absolutsizes["item"]/windowwidth,2),
+		player = roundFloored(absolutsizes["player"]/windowwidth,2),
+		btnalert = roundFloored(absolutsizes["btnalert"]/windowwidth,2),
+		btnx = roundFloored(absolutsizes["btnx"]/windowwidth,2),
+		btnignore = roundFloored(absolutsizes["btnignore"]/windowwidth,2),
+		btnstartbid = roundFloored(absolutsizes["btnstartbid"]/windowwidth,2),
 	}
 
 	local windowheight = min( 700,  75 + 25 * CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) )
@@ -242,7 +242,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 				btnStart.itemLink = itemLink
 				btnStart.holdingPlayer = loot["playerName"]
 				CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. historyid] = btnStart
-				btnStart:SetText("SLS bidding")
+				btnStart:SetText("SLS bid")
 				btnStart:SetRelativeWidth(relativewidth["btnstartbid"])
 				btnStart:SetCallback("OnClick", function(widget)
 					if CheeseSLS:StartBidding(widget.itemLink, widget.holdingPlayer) then
