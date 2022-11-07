@@ -19,8 +19,8 @@ CheeseSLSLootTracker.optionsTable = {
 	args = {
 		enabled = {
 			order = 10,
-			name = "Enabled",
-			desc = "Enabled",
+			name = L["Enabled"],
+			desc = L["Enabled"],
 			type = "toggle",
 			set = function(info,val)
 				CheeseSLSLootTracker.db.profile.enabled = val
@@ -29,8 +29,8 @@ CheeseSLSLootTracker.optionsTable = {
 		},
 		debugging = {
 			order = 20,
-			name = "Debug",
-			desc = "Debug",
+			name = L["Debug"],
+			desc = L["Debug"],
 			type = "toggle",
 			set = function(info,val)
 				CheeseSLSLootTracker.db.profile.debugging = val
@@ -41,8 +41,8 @@ CheeseSLSLootTracker.optionsTable = {
 
 		limit2hours = {
 			order = 30,
-			name = "2 hr view limit",
-			desc = "Limit shown loot to two hours (tradeable time window)",
+			name = L["2 hr view limit"],
+			desc = L["Limit shown loot to two hours (tradeable time window)"],
 			type = "toggle",
 			set = function(info,val)
 				CheeseSLSLootTracker.db.profile.limittwohour = val
@@ -51,8 +51,8 @@ CheeseSLSLootTracker.optionsTable = {
 		},
 		delete2hours = {
 			order = 35,
-			name = "2 hr deletion",
-			desc = "Delete loot older than two hours (tradeable time window) from tracker",
+			name = L["2 hr deletion"],
+			desc = L["Delete loot older than two hours (tradeable time window) from tracker"],
 			type = "toggle",
 			set = function(info,val)
 				CheeseSLSLootTracker.db.profile.deletetwohour = val
@@ -66,16 +66,16 @@ CheeseSLSLootTracker.optionsTable = {
 
 		numberloot = {
 			order = 40,
-			name = "# loot items",
-			desc = "Number of loot items stored in DB",
+			name = L["# loot items"],
+			desc = L["Number of loot items stored in DB"],
 			type = "input",
 			set = function(info,val) end,
 			get = function(info) return tostring(CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory)) end,
 		},
 		clearloot = {
 			order = 50,
-			name = "Clear loot table",
-			desc = "Number of loot items stored in DB",
+			name = L["Clear loot table"],
+			desc = L["Clear loot table"],
 			type = "execute",
 			confirm = true,
 			func = function(info) CheeseSLSLootTracker.db.profile.loothistory = {} end,

@@ -10,11 +10,11 @@ end
 function CheeseSLSLootTracker:createLootTrackFrame()
 	-- no current loot? don't create frame
 	if not CheeseSLSLootTracker.db.profile.loothistory then
-		CheeseSLSLootTracker:Print("No loot history to show" .. " (nil)")
+		CheeseSLSLootTracker:Print(L["No loot history to show"] .. " (nil)")
 		return
 	end
 	if CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) == 0 then
-		CheeseSLSLootTracker:Print("No loot history to show" .. " (#0)")
+		CheeseSLSLootTracker:Print(L["No loot history to show"] .. " (#0)")
 		return
 	end
 	-- calculate size and percentages
@@ -46,7 +46,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	local windowheight = min( 700,  75 + 25 * CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) )
 
 	local f = AceGUI:Create("Window")
-	f:SetTitle("SLS Loot History")
+	f:SetTitle(L["SLS Loot History"])
 	f:SetStatusText("")
 	f:SetLayout("Flow")
 	f:SetWidth(windowwidth)
@@ -170,7 +170,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 				CheeseSLSLootTracker.lootTrackFrameButtons["btnAlert" .. historyid] = btnAlert
 				btnAlert:SetRelativeWidth(relativewidth["btnalert"])
 				btnAlert:SetDisabled(CheeseSLSClient.db.profile.alertlist[itemId])
-				btnAlert:SetText("Alert")
+				btnAlert:SetText(L["Alert"])
 				btnAlert:SetCallback("OnClick", function(widget)
 					CheeseSLSClient.db.profile.alertlist[widget.itemId] = time()
 
@@ -218,7 +218,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 				btnIgnore.itemId = itemId
 				CheeseSLSLootTracker.lootTrackFrameButtons["btnIgnore" .. historyid] = btnIgnore
 				btnIgnore:SetDisabled(CheeseSLSClient.db.profile.ignorelist[itemId])
-				btnIgnore:SetText("Ignore")
+				btnIgnore:SetText(L["Ignore"])
 				btnIgnore:SetRelativeWidth(relativewidth["btnignore"])
 				btnIgnore:SetCallback("OnClick", function(widget)
 					CheeseSLSClient.db.profile.ignorelist[widget.itemId] = time()
@@ -242,7 +242,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 				btnStart.itemLink = itemLink
 				btnStart.holdingPlayer = loot["playerName"]
 				CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. historyid] = btnStart
-				btnStart:SetText("SLS bid")
+				btnStart:SetText(L["SLS bid"])
 				btnStart:SetRelativeWidth(relativewidth["btnstartbid"])
 				btnStart:SetCallback("OnClick", function(widget)
 					if CheeseSLS:StartBidding(widget.itemLink, widget.holdingPlayer) then
@@ -267,12 +267,12 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 		s:AddChild(lbBlankspace)
 
 		local lbCntHidden = AceGUI:Create("InteractiveLabel")
-		lbCntHidden:SetText(tostring(counthidden) .. " hidden entries.")
+		lbCntHidden:SetText(L["hidden entries"](counthidden))
 		lbCntHidden:SetRelativeWidth(0.25)
 		s:AddChild(lbCntHidden)
 
 		local btnLimitConfig = AceGUI:Create("Button")
-		btnLimitConfig:SetText("Disable limiting to 2 hours")
+		btnLimitConfig:SetText(L["Disable limiting to 2 hours"])
 		btnLimitConfig:SetRelativeWidth(0.65)
 		btnLimitConfig:SetCallback("OnClick", function(widget)
 			CheeseSLSLootTracker.db.profile.limittwohour = false
