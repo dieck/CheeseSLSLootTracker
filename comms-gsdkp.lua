@@ -20,7 +20,7 @@ function CheeseSLSLootTracker:OnCommReceivedGSDKP(prefix, message, distribution,
 			CheeseSLSLootTracker.GSDKP_DKP = d["dkp"]
 		end
 	end
-	
+
 end
 
 -- send out "new" loot to other CheeseSLSLootTracker
