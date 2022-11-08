@@ -13,7 +13,7 @@ function CheeseSLSLootTracker:OnCommReceived(prefix, message, distribution, send
 	-- playerName may contain "-REALM"
 	sender = strsplit("-", sender)
 
-	local success, deserialized = CheeseSLSLootTracker:Deserialize(message);
+	local success, d = CheeseSLSLootTracker:Deserialize(message);
 
 	-- every thing else get handled if (if not disabled)
 	if not success then
@@ -21,22 +21,39 @@ function CheeseSLSLootTracker:OnCommReceived(prefix, message, distribution, send
 		return
 	end
 
-	if deserialized["command"] == "LOOT_QUEUED" then
+	-- ignore commands we don't handle here
+	if d["command"] == "BIDDING_START" then return end
+	if d["command"] == "BIDDING_STOP" then return end
+	if d["command"] == "GOT_ROLL" then return end
+	if d["command"] == "GOT_FIX" then return end
+	if d["command"] == "GOT_FULL" then return end
+	
+	if CheeseSLSLootTracker.commUUIDseen[d["uuid"]] then
+		CheeseSLSLootTracker:Debug("received comm " .. d["uuid"] .. ": already seen, ignoring " .. d["command"] .. " from " .. sender)
+		return
+	else
+		CheeseSLSLootTracker:Debug("received comm " .. d["uuid"] .. ": " .. d["command"] .. " from " .. sender)
+	end
 
-		local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", deserialized["itemLink"])
+	CheeseSLSLootTracker.commUUIDseen[d["uuid"]] = d["uuid"]
 
-		local id = tostring(deserialized["queueTime"]) .. "/" .. tostring(itemId) .. "/" .. tostring(deserialized["playerName"])
+	if d["command"] == "LOOT_QUEUED" then
+
+		local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", d["itemLink"])
+
+		local id = tostring(d["queueTime"]) .. "/" .. tostring(itemId) .. "/" .. tostring(d["playerName"])
 		CheeseSLSLootTracker.db.profile.loothistory[id] = {
+			uuid = d["uuid"],
 			itemId = itemId,
-			itemLink = deserialized["itemLink"],
-			queueTime = deserialized["queueTime"],
-			playerName = deserialized["playerName"]
+			itemLink = d["itemLink"],
+			queueTime = d["queueTime"],
+			playerName = d["playerName"]
 		}
 
 		-- call asynchronous getItemInfo so it's cached later on
 		GetItemInfo(itemId)
 
-		CheeseSLSLootTracker:Debug("incoming LOOT_QUEUED: " .. deserialized["itemLink"] .. " from " .. deserialized["playerName"])
+		CheeseSLSLootTracker:Debug("incoming LOOT_QUEUED: " .. d["itemLink"] .. " from " .. d["playerName"])
 
 	end
 
@@ -45,9 +62,18 @@ end
 
 -- send out "new" loot to other CheeseSLSLootTracker
 
-function CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount)
-	local commmsg = { command = "LOOT_QUEUED", version = CheeseSLSLootTracker.commVersion, itemLink = itemLink, queueTime = time(), playerName= playerName, itemCount = itemCount }
-	CheeseSLSLootTracker:Print(CheeseSLSLootTracker:Serialize(commmsg))
+function CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount, queueTime, uuid)
+	local queueT = queueTime or time()
+	local uu = uuid or CheeseSLSLootTracker:UUID()
+	local commmsg = {
+		command = "LOOT_QUEUED",
+		version = CheeseSLSLootTracker.commVersion,
+		uuid = uu,
+		itemLink = itemLink,
+		queueTime = queueT,
+		playerName= playerName,
+		itemCount = itemCount 
+	}
 	CheeseSLSLootTracker:SendCommMessage(CheeseSLSLootTracker.commPrefix, CheeseSLSLootTracker:Serialize(commmsg), "RAID", nil, "BULK")
 end
 
@@ -115,8 +141,22 @@ function CheeseSLSLootTracker:CHAT_MSG_LOOT(event, text, sender)
 	-- if d == "\124cffffffff\124Hitem" then CheeseSLSLootTracker:Print("Common") end -- Common
 	-- if d == "\124cff9d9d9d\124Hitem" then CheeseSLSLootTracker:Print("Trash") end -- Greys
 
-	if (d == "\124cffff8000\124Hitem") or (d == "\124cffa335ee\124Hitem") then
-		CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount)
-	end
+--	if (d == "\124cffff8000\124Hitem") or (d == "\124cffa335ee\124Hitem") then
+		local queueT = time()
+		local uuid = CheeseSLSLootTracker:UUID()
+
+--		local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", itemLink)
+--		local id = tostring(queueT) .. "/" .. tostring(itemId) .. "/" .. tostring(playerName)
+
+--		CheeseSLSLootTracker.db.profile.loothistory[id] = {
+--			uuid = uuid,
+--			itemId = itemId,
+--			itemLink = itemLink,
+--			queueTime = queueT,
+--			playerName = playerName,
+--		}
+	
+		CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount, queueT, uuid)
+--	end
 
 end

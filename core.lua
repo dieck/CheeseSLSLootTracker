@@ -91,24 +91,6 @@ function CheeseSLSLootTracker:OnInitialize()
 	LibStub("AceConfig-3.0"):RegisterOptionsTable("CheeseSLSLootTracker", self.optionsTable)
 	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("CheeseSLSLootTracker", "CheeseSLSLootTracker")
 
-	self:RegisterChatCommand("cslsloot", "ChatCommand")
-	self:RegisterChatCommand("slsloot", "ChatCommand");
-
-	self:RegisterComm(CheeseSLSLootTracker.commPrefix, "OnCommReceived")
-	self:RegisterComm(CheeseSLSLootTracker.commPrefixGSDKP, "OnCommReceivedGSDKP")
-
-	self:RegisterEvent("CHAT_MSG_LOOT")
-
-	-- self:RegisterEvent("LOOT_OPENED")
-	-- self:RegisterEvent("LOOT_CLOSED") -- from wowpedia: Note that this will fire before the last CHAT_MSG_LOOT event for that loot.
-
-	-- self:RegisterEvent("START_LOOT_ROLL")
-	-- self:RegisterEvent("LOOT_ROLLS_COMPLETE") -- so most likely this could as well be before last CHAT_MSG_LOOT
-
-	-- use only TRADE for now, to be ignored. I don't care which kind of Loot it actually was
-	self:RegisterEvent("TRADE_SHOW")
-	self:RegisterEvent("TRADE_CLOSED") -- so most likely this could as well be before last CHAT_MSG_LOOT
-
 	-- prepare list
 
 	if CheeseSLSLootTracker.db.profile.loothistory == nil then
@@ -137,11 +119,30 @@ function CheeseSLSLootTracker:OnInitialize()
 		end
 	end
 
+	CheeseSLSLootTracker.commUUIDseen = {}
+
 	CheeseSLSLootTracker:Print("CheeseSLSLootTracker loaded.")
 end
 
 function CheeseSLSLootTracker:OnEnable()
 	-- Called when the addon is enabled
+	self:RegisterChatCommand("cslsloot", "ChatCommand")
+	self:RegisterChatCommand("slsloot", "ChatCommand");
+
+	self:RegisterComm(CheeseSLSLootTracker.commPrefix, "OnCommReceived")
+	self:RegisterComm(CheeseSLSLootTracker.commPrefixGSDKP, "OnCommReceivedGSDKP")
+
+	self:RegisterEvent("CHAT_MSG_LOOT")
+
+	-- self:RegisterEvent("LOOT_OPENED")
+	-- self:RegisterEvent("LOOT_CLOSED") -- from wowpedia: Note that this will fire before the last CHAT_MSG_LOOT event for that loot.
+
+	-- self:RegisterEvent("START_LOOT_ROLL")
+	-- self:RegisterEvent("LOOT_ROLLS_COMPLETE") -- so most likely this could as well be before last CHAT_MSG_LOOT
+
+	-- use only TRADE for now, to be ignored. I don't care which kind of Loot it actually was
+	self:RegisterEvent("TRADE_SHOW")
+	self:RegisterEvent("TRADE_CLOSED") -- so most likely this could as well be before last CHAT_MSG_LOOT
 end
 
 function CheeseSLSLootTracker:OnDisable()
@@ -217,3 +218,24 @@ function CheeseSLSLootTracker:Debug(t)
 	end
 end
 
+
+-- derived from https://github.com/anders/luabot-scripts/blob/master/etc/UUID.lua, under Eclipse Public License 1.0 (minor adjustments for WoW usage)
+function CheeseSLSLootTracker:UUID()
+	local chars = {"0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F"}
+	local uuid = {[9]="-",[14]="-",[15]="4",[19]="-",[24]="-"}
+	local r, index
+	for i = 1,36 do
+		if(uuid[i]==nil)then
+			-- r = 0 | Math.random()*16;
+			r = random (16)
+			if(i == 20)then
+				-- bits 1+2 of pos 20 are "10". bin1000 = dec8. 2-bits are 0-3
+				index = random(0,3) + 8
+			else
+				index = r
+			end
+			uuid[i] = chars[index]
+		end
+	end
+	return table.concat(uuid)
+end
