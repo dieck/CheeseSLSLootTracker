@@ -27,7 +27,7 @@ function CheeseSLSLootTracker:OnCommReceived(prefix, message, distribution, send
 	if d["command"] == "GOT_ROLL" then return end
 	if d["command"] == "GOT_FIX" then return end
 	if d["command"] == "GOT_FULL" then return end
-	
+
 	if CheeseSLSLootTracker.commUUIDseen[d["uuid"]] then
 		CheeseSLSLootTracker:Debug("received comm " .. d["uuid"] .. ": already seen, ignoring " .. d["command"] .. " from " .. sender)
 		return
@@ -72,7 +72,7 @@ function CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount, qu
 		itemLink = itemLink,
 		queueTime = queueT,
 		playerName= playerName,
-		itemCount = itemCount 
+		itemCount = itemCount
 	}
 	CheeseSLSLootTracker:SendCommMessage(CheeseSLSLootTracker.commPrefix, CheeseSLSLootTracker:Serialize(commmsg), "RAID", nil, "BULK")
 end
@@ -141,7 +141,7 @@ function CheeseSLSLootTracker:CHAT_MSG_LOOT(event, text, sender)
 	-- if d == "\124cffffffff\124Hitem" then CheeseSLSLootTracker:Print("Common") end -- Common
 	-- if d == "\124cff9d9d9d\124Hitem" then CheeseSLSLootTracker:Print("Trash") end -- Greys
 
---	if (d == "\124cffff8000\124Hitem") or (d == "\124cffa335ee\124Hitem") then
+	if (d == "\124cffff8000\124Hitem") or (d == "\124cffa335ee\124Hitem") then
 		local queueT = time()
 		local uuid = CheeseSLSLootTracker:UUID()
 
@@ -155,8 +155,8 @@ function CheeseSLSLootTracker:CHAT_MSG_LOOT(event, text, sender)
 --			queueTime = queueT,
 --			playerName = playerName,
 --		}
-	
+
 		CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount, queueT, uuid)
---	end
+	end
 
 end
