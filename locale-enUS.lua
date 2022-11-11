@@ -7,6 +7,9 @@ if L then
 L["Enabled"] = "Enabled"
 L["Debug"] = "Debug"
 
+L["Track Trash"] = "Track all loot"
+L["Track Trash items for debugging"] = "Track all loot (from grays) for debugging"
+
 L["is enabled."] = "ist enabled."
 L["is disabled."] = "ist disabled."
 

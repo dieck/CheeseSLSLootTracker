@@ -100,6 +100,12 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 		local historyid = keyset[i]
 		local loot = CheeseSLSLootTracker.db.profile.loothistory[ historyid ]
 
+		-- item ignorance assessment will call to GetItemInfo(). If we don't get data just get, will be retried when showing the GUI
+		local itemIgnorance = CheeseSLSLootTracker:determineItemIgnorance(tonumber(loot["itemId"]))
+		if itemIgnorance then
+			CheeseSLSClient.db.profile.ignorelist[tonumber(loot["itemId"])] = time()
+		end
+
 		if CheeseSLSLootTracker.db.profile.deletetwohour and tonumber(loot["queueTime"]) < twohoursago then
 			-- remove loot history if requested
 			CheeseSLSLootTracker.db.profile.loothistory[historyid] = nil
