@@ -20,7 +20,7 @@ function CheeseSLSLootTracker:determineItemIgnorance(itemId)
 	-- so we use IDs as per https://wowpedia.fandom.com/wiki/ItemType
 
 	local localizedClass, englishClass, classIndex = UnitClass("player")
-	
+
 	-- Usable weapons
 	-- from https://wowpedia.fandom.com/wiki/ItemType#2:_Weapon and https://wowwiki-archive.fandom.com/wiki/Class_proficiencies
 	local useableWeapons = {
@@ -73,7 +73,7 @@ function CheeseSLSLootTracker:determineItemIgnorance(itemId)
 		-- no proficiency found for this armor, so assume it cannot be used
 		return true
 	end
-	
+
 	-- not a weapon or armor, so let's not ignore this
 	return false
 

@@ -102,7 +102,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 
 		-- item ignorance assessment will call to GetItemInfo(). If we don't get data just get, will be retried when showing the GUI
 		local itemIgnorance = CheeseSLSLootTracker:determineItemIgnorance(tonumber(loot["itemId"]))
-		if itemIgnorance then
+		if CheeseSLSClient and itemIgnorance then
 			CheeseSLSClient.db.profile.ignorelist[tonumber(loot["itemId"])] = time()
 		end
 
