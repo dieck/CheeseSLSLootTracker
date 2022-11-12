@@ -13,12 +13,38 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 		CheeseSLSLootTracker:Print(L["No loot history to show"] .. " (nil)")
 		return
 	end
+
+	local twohoursago = time() - 2*60*60
+
+	-- delete old entries
+	-- and prepapre to sort loot history while we're at it
+	local keyset={}
+	for historyid,loot in pairs(CheeseSLSLootTracker.db.profile.loothistory) do
+		if CheeseSLSLootTracker.db.profile.deletetwohour and tonumber(loot["queueTime"]) < twohoursago then
+			-- remove loot history if requested
+			CheeseSLSLootTracker.db.profile.loothistory[historyid] = nil
+		else
+			-- insert to keyset for sorting
+			tinsert(keyset, historyid)
+		end
+	end
+
+	-- if there is no loot left to show after possible deletion, stop
 	if CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) == 0 then
 		CheeseSLSLootTracker:Print(L["No loot history to show"] .. " (#0)")
 		return
 	end
-	-- calculate size and percentages
 
+
+	-- id = tostring(deserialized["queueTime"]) .. "/" .. tostring(itemId) .. "/" .. tostring(deserialized["playerName"])
+	table.sort(keyset, function(a,b)
+		local aTime, _, _ = strsplit("/", a)
+		local bTime, _, _ = strsplit("/", b)
+		return (tonumber(aTime) < tonumber(bTime))
+	end)
+	-- keyset is now sorted in DESCENDING TIME
+
+	-- calculate size and percentages
 	local absolutsizes = {
 		timestamp = 35,
 		icon = 25,
@@ -78,21 +104,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 		if not CheeseSLSClient.db.profile.ignorelist then CheeseSLSClient.db.profile.ignorelist = {} end
 	end
 
-	-- sort loot history
-	local keyset={}
-	for historyid,loot in pairs(CheeseSLSLootTracker.db.profile.loothistory) do
-		tinsert(keyset, historyid)
-	end
-
-	-- id = tostring(deserialized["queueTime"]) .. "/" .. tostring(itemId) .. "/" .. tostring(deserialized["playerName"])
-	table.sort(keyset, function(a,b)
-		local aTime, _, _ = strsplit("/", a)
-		local bTime, _, _ = strsplit("/", b)
-		return (tonumber(aTime) < tonumber(bTime))
-	end)
-
-	local twohoursago = time() - 2*60*60
-
+	-- for presenting number at the end, if there are hidden entries
 	local counthidden = 0
 
 	-- keyset is now sorted in DESCENDING TIME
@@ -100,23 +112,14 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 		local historyid = keyset[i]
 		local loot = CheeseSLSLootTracker.db.profile.loothistory[ historyid ]
 
-		-- item ignorance assessment will call to GetItemInfo(). If we don't get data just get, will be retried when showing the GUI
+		-- set ignorance for CheeseSLSClient, if installed
 		local itemIgnorance = CheeseSLSLootTracker:determineItemIgnorance(tonumber(loot["itemId"]))
 		if CheeseSLSClient and itemIgnorance then
 			CheeseSLSClient.db.profile.ignorelist[tonumber(loot["itemId"])] = time()
 		end
 
-		if CheeseSLSLootTracker.db.profile.deletetwohour and tonumber(loot["queueTime"]) < twohoursago then
-			-- remove loot history if requested
-			CheeseSLSLootTracker.db.profile.loothistory[historyid] = nil
-
-			-- wtf, LUA has no continue or next statement? They REALLY want you to use GOTO?
-			-- https://stackoverflow.com/questions/3524970/why-does-lua-have-no-continue-statement
-			-- no, not going to do that. I'll work with if/else then...
-			-- can't show list entry - it's not there anymore (here would be a "continue" statement...)
-		elseif CheeseSLSLootTracker.db.profile.limittwohour and tonumber(loot["queueTime"]) < twohoursago then
+		if CheeseSLSLootTracker.db.profile.limittwohour and tonumber(loot["queueTime"]) < twohoursago then
 			counthidden = counthidden + 1
-			-- show nothing. (here would be a "continue" statement...)
 		else
 			-- show list entry
 
