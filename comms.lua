@@ -240,7 +240,7 @@ function CheeseSLSLootTracker:CHAT_MSG_LOOT(event, text, sender)
 	-- if d == "\124cffffffff\124Hitem" then CheeseSLSLootTracker:Print("Common") end -- Common
 	-- if d == "\124cff9d9d9d\124Hitem" then CheeseSLSLootTracker:Print("Trash") end -- Greys
 
-	if (CheeseSLSLootTracker.db.profile.debuggingTrash) or (d == "\124cffff8000\124Hitem") or (d == "\124cffa335ee\124Hitem") then
+	if (CheeseSLSLootTracker.db.profile.debugging and CheeseSLSLootTracker.db.profile.debuggingTrash) or (d == "\124cffff8000\124Hitem") or (d == "\124cffa335ee\124Hitem") then
 		local queueT = time()
 		local uuid = CheeseSLSLootTracker:UUID()
 
