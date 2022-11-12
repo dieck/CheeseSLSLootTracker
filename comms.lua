@@ -8,6 +8,9 @@ local deformat = LibStub("LibDeformat-3.0")
 -- will return TRUE for items to be ignored, nil or false for no action
 function CheeseSLSLootTracker:determineItemIgnorance(itemId)
 
+	-- if we are not auto-ignoring, we will allow all items
+	if not CheeseSLSLootTracker.db.profile.autoignoreunwearable then return false end
+
 	-- call asynchronous getItemInfo so it's cached later on
 	-- if we got the data already in cache, even better. But we'll revisit this on showing the GUI
 

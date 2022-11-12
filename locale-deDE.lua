@@ -10,6 +10,9 @@ L["Debug"] = "Debug"
 L["Track Trash"] = "Allen Loot listen"
 L["Track Trash items for debugging"] = "Liste allen Loot (von grau an) zum Debuggen"
 
+L["Auto Ignore"] = "Auto-Ignorieren"
+L["Automatically ignore unwearable items (e.g. plate for cloth classes or wands for meelees)"] = "Automatisch Items ignorieren, die man nicht tragen kann (z.B. Platte für Stoffklassen oder Zauberstab für Nahkämpfer)"
+
 L["is enabled."] = "ist aktiv."
 L["is disabled."] = "ist deaktiviert."
 

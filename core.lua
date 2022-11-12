@@ -11,7 +11,8 @@ local defaults = {
 		debugging = false,
 		debuggingTrash = false,
 		limittwohour = true,
-		deletetwohour = false,
+		deletetwohour = true,
+		autoignoreunwearable = true,
 	}
 }
 
@@ -74,11 +75,20 @@ CheeseSLSLootTracker.optionsTable = {
 		},
 		newline39 = { name="", type="description", order=39 },
 
-		newline39 = { name="", type="description", order=39 },
-
+		autoignore = {
+			order = 40,
+			name = L["Auto Ignore"],
+			desc = L["Automatically ignore unwearable items (e.g. plate for cloth classes or wands for meelees)"],
+			type = "toggle",
+			set = function(info,val)
+				CheeseSLSLootTracker.db.profile.autoignoreunwearable = val
+			end,
+			get = function(info) return CheeseSLSLootTracker.db.profile.autoignoreunwearable end,
+		},
+		newline49 = { name="", type="description", order=49 },
 
 		numberloot = {
-			order = 40,
+			order = 100,
 			name = L["# loot items"],
 			desc = L["Number of loot items stored in DB"],
 			type = "input",
@@ -86,7 +96,7 @@ CheeseSLSLootTracker.optionsTable = {
 			get = function(info) return tostring(CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory)) end,
 		},
 		clearloot = {
-			order = 50,
+			order = 105,
 			name = L["Clear loot table"],
 			desc = L["Clear loot table"],
 			type = "execute",
