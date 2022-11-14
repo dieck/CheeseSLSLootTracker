@@ -23,6 +23,8 @@ L["Delete loot older than two hours (tradeable time window) from tracker"] = "L�
 L["# loot items"] = "# Gegenstände"
 L["Number of loot items stored in DB"] = "Anzahl der Gegenstände in der Loot-Liste"
 L["Clear loot table"] = "Lösche Loot-Liste"
+L["Send loot table"] = "Sende Loot-Liste"
+L["Send loot table to all other players"] = "Sende Loot-Liste an alle anderen Spieler"
 
 -- gui
 

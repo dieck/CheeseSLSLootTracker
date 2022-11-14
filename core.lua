@@ -103,6 +103,19 @@ CheeseSLSLootTracker.optionsTable = {
 			confirm = true,
 			func = function(info) CheeseSLSLootTracker.db.profile.loothistory = {} end,
 		},
+		sendall = {
+			order = 110,
+			name = L["Send loot table"],
+			desc = L["Send loot table to all other players"],
+			type = "execute",
+			confirm = true,
+			func = function(info)
+				for k,v in pairs(CheeseSLSLootTracker.db.profile.loothistory) do
+					CheeseSLSLootTracker:sendLootQueued(v["itemLink"], v["playerName"], 1, v["queueTime"], v["uuid"])
+				end
+			end,
+		},
+		newline119 = { name="", type="description", order=119 },
 
 	} -- args
 }
@@ -178,7 +191,11 @@ end
 
 function CheeseSLSLootTracker:ChatCommand(inc)
 
-	if strlt(inc) == "" then
+	if strlt(inc) == "config" then
+		LibStub("AceConfigDialog-3.0"):Open("CheeseSLSLootTracker")
+		return nil
+
+	elseif strlt(inc) == "" then
 
 		CheeseSLSLootTracker.lootTrackFrame = CheeseSLSLootTracker:createLootTrackFrame()
 		if CheeseSLSLootTracker.lootTrackFrame then
