@@ -82,7 +82,7 @@ function CheeseSLSLootTracker:determineItemIgnorance(itemId)
 
 end
 
-function CheeseSLSLootTracker:addLoot(itemLink, playerName, queueTime, uuid)
+function CheeseSLSLootTracker:addLoot(itemLink, playerName, queueTime, uuid, winner)
 
 	local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", itemLink)
 
@@ -98,22 +98,29 @@ function CheeseSLSLootTracker:addLoot(itemLink, playerName, queueTime, uuid)
 		if tonumber(val["itemId"]) == tonumber(itemId) and tostring(val["playerName"]) == tostring(playerName) then
 			if tonumber(val["queueTime"]) <= tonumber(queueTime)+5 and tonumber(val["queueTime"]) >= tonumber(queueTime)-5 then
 				CheeseSLSLootTracker:Debug("Asked to queue loot but found this item already as " .. val["uuid"])
-				isKnown = true
+
+				-- if times to not match exactly, re-book item later (so all will match everywhere)
+				if tonumber(val["queueTime"]) ~= tonumber(queueTime) then isKnown = key end
 			end
 		end
 	end
 
-	if not isKnown then
-		local id = tostring(queueTime) .. "/" .. tostring(itemId) .. "/" .. tostring(playerName)
-		CheeseSLSLootTracker.db.profile.loothistory[id] = {
-			uuid = uuid,
-			itemId = itemId,
-			itemLink = itemLink,
-			queueTime = queueTime,
-			playerName = playerName
-		}
-		CheeseSLSLootTracker:Debug("incoming LOOT_QUEUED: " .. tostring(itemLink) .. " from " .. tostring(playerName))
+	local id = tostring(queueTime) .. "/" .. tostring(itemId) .. "/" .. tostring(playerName)
+	CheeseSLSLootTracker.db.profile.loothistory[id] = {
+		uuid = uuid,
+		itemId = itemId,
+		itemLink = itemLink,
+		queueTime = queueTime,
+		playerName = playerName,
+		winner = winner
+	}
+
+	-- remove loot if it was previously known (overwritten with new id, so all are the same around synced addons)
+	if isKnown then
+		CheeseSLSLootTracker.db.profile.loothistory[isKnown] = nil
 	end
+
+	CheeseSLSLootTracker:Debug("incoming LOOT_QUEUED: " .. tostring(itemLink) .. " from " .. tostring(playerName))
 
 end
 
@@ -142,20 +149,27 @@ function CheeseSLSLootTracker:OnCommReceived(prefix, message, distribution, send
 	if d["command"] == "GOT_FIX" then return end
 	if d["command"] == "GOT_FULL" then return end
 
-	-- avoid doublettes (was a debug problem, sending to RAID and GUILD, but let's leave it in)
-	if CheeseSLSLootTracker.commUUIDseen[d["uuid"]] then
-		CheeseSLSLootTracker:Debug("received comm " .. d["uuid"] .. ": already seen, ignoring " .. d["command"] .. " from " .. sender)
-		return
-	else
-		CheeseSLSLootTracker:Debug("received comm " .. d["uuid"] .. ": " .. d["command"] .. " from " .. sender)
-	end
-
-	CheeseSLSLootTracker.commUUIDseen[d["uuid"]] = d["uuid"]
-
 	if d["command"] == "LOOT_QUEUED" then
+		-- avoid doublettes (was a debug problem, sending to RAID and GUILD, but let's leave it in)
+		if CheeseSLSLootTracker.commUUIDseen[d["uuid"]] then
+			CheeseSLSLootTracker:Debug("received comm " .. d["uuid"] .. ": already seen, ignoring " .. d["command"] .. " from " .. sender)
+			return
+		else
+			CheeseSLSLootTracker:Debug("received comm " .. d["uuid"] .. ": " .. d["command"] .. " from " .. sender)
+		end
+
+		CheeseSLSLootTracker.commUUIDseen[d["uuid"]] = d["uuid"]
+
 		CheeseSLSLootTracker:addLoot(d["itemLink"], d["playerName"], d["queueTime"], d["uuid"])
 	end
 
+	if d["command"] == "WINNING_NOTIFICATION" then
+		if CheeseSLSLootTracker.db.profile.loothistory[d["lootTrackerId"]] then
+			CheeseSLSLootTracker.db.profile.loothistory[d["lootTrackerId"]]["winner"] = d["winner"]
+		end
+		-- update label if available
+		if CheeseSLSLootTracker.winnerLabels[d["lootTrackerId"]] then CheeseSLSLootTracker.winnerLabels[d["lootTrackerId"]]:SetText(d["winner"]) end
+	end
 end
 
 
@@ -174,15 +188,6 @@ function CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount, qu
 		itemCount = itemCount
 	}
 	CheeseSLSLootTracker:SendCommMessage(CheeseSLSLootTracker.commPrefix, CheeseSLSLootTracker:Serialize(commmsg), "RAID", nil, "BULK")
-end
-
--- to ignore trade windows, which also give the EXACT SAME CHAT_MSG_LOOT. WTF Blizzard.
-function CheeseSLSLootTracker:TRADE_SHOW()
-	CheeseSLSLootTracker.tradeWindow = true
-end
-function CheeseSLSLootTracker:TRADE_CLOSED()
-	-- give CHAT_MSG_LOOT about 1 second to catch up before assuming it's not a trade anymore
-	CheeseSLSLootTracker:ScheduleTimer(function() CheeseSLSLootTracker.tradeWindow = false end, 1)
 end
 
 

@@ -46,16 +46,17 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 
 	-- calculate size and percentages
 	local absolutsizes = {
-		timestamp = 35,
+		timestamp = 40,
 		icon = 25,
 		item = 150,
-		player = 70,
+		player = 75,
 		btnalert = 75,
 		btnx = 45,
 		btnignore = 75,
-		btnstartbid = 90,
+		btnstartbid = 60,
+		winner = 75,
 	}
-	local windowwidth = absolutsizes["timestamp"] + absolutsizes["icon"] + absolutsizes["item"] + absolutsizes["player"]
+	local windowwidth = absolutsizes["timestamp"] + absolutsizes["icon"] + absolutsizes["item"] + absolutsizes["player"] + absolutsizes["winner"]
 	if (CheeseSLSClient) then	windowwidth = windowwidth + absolutsizes["btnalert"] + absolutsizes["btnx"] + absolutsizes["btnignore"] end
 	if (CheeseSLS) then	windowwidth = windowwidth + absolutsizes["btnstartbid"] end
 	local relativewidth = {
@@ -67,6 +68,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 		btnx = roundFloored(absolutsizes["btnx"]/windowwidth,2),
 		btnignore = roundFloored(absolutsizes["btnignore"]/windowwidth,2),
 		btnstartbid = roundFloored(absolutsizes["btnstartbid"]/windowwidth,2),
+		winner = roundFloored(absolutsizes["winner"]/windowwidth,2),
 	}
 
 	local windowheight = min( 700,  75 + 25 * CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) )
@@ -85,6 +87,51 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	local frameName = "CheeseSLSLootTracker.lootTrackFrameFrame"
 	_G[frameName] = f.frame
 	tinsert(UISpecialFrames, frameName)
+
+	-- headers
+
+	local hdrTimestamp = AceGUI:Create("InteractiveLabel")
+	hdrTimestamp:SetText("Drop")
+	hdrTimestamp:SetColor(204,0,204)
+	hdrTimestamp:SetRelativeWidth(relativewidth["timestamp"])
+	f:AddChild(hdrTimestamp)
+
+	local hdrItem = AceGUI:Create("InteractiveLabel")
+	hdrItem:SetText("Item")
+	hdrItem:SetColor(204,0,204)
+	hdrItem:SetRelativeWidth(relativewidth["icon"] + relativewidth["item"])
+	f:AddChild(hdrItem)
+
+	local hdrCarrier = AceGUI:Create("InteractiveLabel")
+	hdrCarrier:SetText("Carrier")
+	hdrCarrier:SetColor(204,0,204)
+	hdrCarrier:SetRelativeWidth(relativewidth["player"])
+	f:AddChild(hdrCarrier)
+
+	if (CheeseSLSClient) then
+		local hdrNotifications = AceGUI:Create("InteractiveLabel")
+		hdrNotifications:SetText("Client Notifications")
+		hdrNotifications:SetColor(204,0,204)
+		hdrNotifications:SetRelativeWidth(relativewidth["btnalert"] + relativewidth["btnx"] + relativewidth["btnignore"])
+		f:AddChild(hdrNotifications)
+	end
+
+	if (CheeseSLS) then
+		local hdrBids = AceGUI:Create("InteractiveLabel")
+		hdrBids:SetText("Bids")
+		hdrBids:SetColor(204,0,204)
+		hdrBids:SetRelativeWidth(relativewidth["btnstartbid"])
+		f:AddChild(hdrBids)
+	end
+
+	local hdrWinner = AceGUI:Create("InteractiveLabel")
+	hdrWinner:SetText("Winner")
+	hdrWinner:SetColor(204,0,204)
+	hdrWinner:SetRelativeWidth(relativewidth["winner"])
+	f:AddChild(hdrWinner)
+
+
+	-- content
 
 	local scrollcontainer = AceGUI:Create("SimpleGroup")
 	scrollcontainer:SetFullWidth(true)
@@ -122,7 +169,6 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 			counthidden = counthidden + 1
 		else
 			-- show list entry
-
 			local itemLink = loot["itemLink"]
 			local itemId = tonumber(loot["itemId"])
 			local _, _, _, _, _, _, _, _, _, itemTexture, _ = GetItemInfo(itemId)
@@ -250,11 +296,12 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 				btnStart.historyid = historyid
 				btnStart.itemLink = itemLink
 				btnStart.holdingPlayer = loot["playerName"]
+				btnStart.history = historyid
 				CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. historyid] = btnStart
 				btnStart:SetText(L["SLS bid"])
 				btnStart:SetRelativeWidth(relativewidth["btnstartbid"])
 				btnStart:SetCallback("OnClick", function(widget)
-					if CheeseSLS:StartBidding(widget.itemLink, widget.holdingPlayer) then
+					if CheeseSLS:StartBidding(widget.itemLink, widget.holdingPlayer, widget.historyid) then
 						CheeseSLSLootTracker.db.profile.alreadyStarted[widget.historyid] = time()
 						CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. widget.historyid]:SetDisabled(true)
 					end
@@ -265,6 +312,15 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 				end
 				s:AddChild(btnStart)
 			end
+
+			local lbWinner = AceGUI:Create("InteractiveLabel")
+			local winningPlayer = loot["winner"] or "-"
+			lbWinner:SetText(winningPlayer)
+			lbWinner:SetRelativeWidth(relativewidth["player"])
+			s:AddChild(lbWinner)
+			-- for updating from comms:
+			CheeseSLSLootTracker.winnerLabels[historyid] = lbWinner
+
 
 		end -- "if,then,else" used instead of a simple "continue" that's missing in lua
 	end --for

@@ -39,6 +39,7 @@ globals = {
 	"CheeseSLSLootTracker",
 
 	-- misc custom
+	"TradeFrame_GetAvailableSlot",
 	"AceGUIWidgetLSMlists",
 	"CUSTOM_CLASS_COLORS",
 	"LibStub",

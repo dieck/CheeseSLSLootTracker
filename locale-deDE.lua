@@ -32,7 +32,7 @@ L["No loot history to show"] = "Keine Loot-Historie zum Anzeigen"
 L["SLS Loot History"] = "SLS Loot-Historie"
 L["Alert"] = "Alarm"
 L["Ignore"] = "Ignorieren"
-L["SLS bid"] = "SLS bieten"
+L["SLS bid"] = "SLS"
 L["hidden entries"] = function(counthidden) return tostring(counthidden) .. " nicht angezeigte Einträge" end
 L["Disable limiting to 2 hours"] = "Limitierung auf 2 Std aufheben"
 

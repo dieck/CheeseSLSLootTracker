@@ -155,7 +155,9 @@ function CheeseSLSLootTracker:OnInitialize()
 		end
 	end
 
+	-- session tables for later
 	CheeseSLSLootTracker.commUUIDseen = {}
+	CheeseSLSLootTracker.winnerLabels = {}
 
 	CheeseSLSLootTracker:Print("CheeseSLSLootTracker loaded.")
 end
@@ -240,6 +242,97 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 	end
 
 end
+
+-- /script CheeseSLSLootTracker:CacheTradeableInventoryPosition()
+-- /dump CheeseSLSLootTracker.inventory
+
+function CheeseSLSLootTracker:CacheTradeableInventoryPosition()
+	CheeseSLSLootTracker.inventory = {}
+
+	local tip = CreateFrame("GameTooltip","Tooltip",nil,"GameTooltipTemplate")
+
+	for bag = BACKPACK_CONTAINER, NUM_BAG_SLOTS do
+		for slot = 1, GetContainerNumSlots(bag) do
+			local icon, itemCount, _locked, quality, readable, lootable, itemLink, isFiltered, noValue, itemID = GetContainerItemInfo(bag, slot)
+			if itemID then
+				tip:SetOwner(UIParent, "ANCHOR_NONE")
+				tip:SetBagItem(bag, slot)
+				tip:Show()
+				for i = 1,tip:NumLines() do
+					if (string.find(_G["TooltipTextLeft"..i]:GetText(), ITEM_BIND_ON_EQUIP)) then
+						-- is BoE
+						CheeseSLSLootTracker.inventory[tonumber(itemID)] = { bag = bag, slot = slot }
+					elseif (string.find(_G["TooltipTextLeft"..i]:GetText(), string.format(BIND_TRADE_TIME_REMAINING, ".*"))) then
+						-- is tradeable (within timer)
+						CheeseSLSLootTracker.inventory[tonumber(itemID)] = { bag = bag, slot = slot }
+					end
+				end
+				tip:Hide()
+			end
+		end
+	end
+
+end
+
+function CheeseSLSLootTracker:TRADE_SHOW()
+	-- to ignore trade windows, which also give the EXACT SAME CHAT_MSG_LOOT. WTF Blizzard.
+	CheeseSLSLootTracker.tradeWindow = true
+
+	local tradePartner = GetUnitName("NPC", true)
+
+	-- no trade partner found? then I wouldn't put anything in
+	if not tradePartner then return end
+
+	-- tradePartner may contain "-REALM"
+	tradePartner = strsplit("-", tradePartner)
+
+	-- find items won by trade partner
+	local loots = {}
+
+	-- ignore items older than 2 hours. BoP is not tradeable anymore
+	-- yes, this will exclude BoE, but they are mostly auctioned off with the other loot anyway
+	-- and in doubt, you'd have to do it by hand - just as years before this change ;)
+	local twohoursago = time() - 2*60*60
+
+	for historyid,loot in pairs(CheeseSLSLootTracker.db.profile.loothistory) do
+		-- check if still tradeable anyway
+		if tonumber(loot["queueTime"]) >= twohoursago then
+			if loot["winner"] == tradePartner then
+				loots[historyid] = loot
+			end
+		end
+	end
+
+	CheeseSLSLootTracker.lastloots = loots
+
+	if loots then
+		CheeseSLSLootTracker:CacheTradeableInventoryPosition()
+
+		for history,loot in pairs(loots) do
+			local itemLink = loot["itemLink"]
+			local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", itemLink)
+
+			if CheeseSLSLootTracker.inventory[tonumber(itemId)] then
+				local inv = CheeseSLSLootTracker.inventory[tonumber(itemId)]
+				CheeseSLSLootTracker:Debug("Trading " .. itemLink .. " (" .. tostring(itemId) .. ") from inventory " .. tostring(inv["bag"]) .. "/" .. tostring(inv["slot"]) .. " to " .. loot["winner"])
+				ClearCursor()
+				PickupContainerItem(inv["bag"], inv["slot"])
+				local tradePos = TradeFrame_GetAvailableSlot()
+				if tradePos ~= nil then
+					ClickTradeButton(tradePos)
+				end
+			end
+		end
+
+	end
+
+end
+
+function CheeseSLSLootTracker:TRADE_CLOSED()
+	-- give CHAT_MSG_LOOT about 1 second to catch up before assuming it's not a trade anymore
+	CheeseSLSLootTracker:ScheduleTimer(function() CheeseSLSLootTracker.tradeWindow = false end, 1)
+end
+
 
 -- helper function: hash table length
 function CheeseSLSLootTracker:htlen(ht)
