@@ -8,15 +8,15 @@ local deformat = LibStub("LibDeformat-3.0")
 -- will return TRUE for items to be ignored, nil or false for no action
 function CheeseSLSLootTracker:determineItemIgnorance(itemId)
 
-	-- if we are not auto-ignoring, we will allow all items
+	-- if we are not auto-ignoring, we will allow (= NOT ignore) all items
 	if not self.db.profile.autoignoreunwearable then return false end
 
 	-- call asynchronous getItemInfo so it's cached later on
 	-- if we got the data already in cache, even better. But we'll revisit this on showing the GUI
 
-	local itemType, itemSubType, _, _, _, _, itemClassID, itemSubclassID = select(6, GetItemInfo(itemId))
+	local itemName, _, _, _, _, itemType, itemSubType, _, _, _, _, itemClassID, itemSubclassID, _, _, _, _ = GetItemInfo(itemId) 
 
-	-- if GetItemInfo ddid not return anything now, we'll not wait for it
+	-- if GetItemInfo did not return anything now, we'll not wait for it
 	if not itemClassID then return nil end
 
 	-- itemType and itemSubType: Be aware that the strings are localized on the clients.
@@ -41,16 +41,16 @@ function CheeseSLSLootTracker:determineItemIgnorance(itemId)
 
 	-- Useable armor
 	local useableArmor = {
-		DEATHKNIGHT = { 1, 2, 3, 4, 5, 6, 10 },
-		DRUID = { 1, 2, 5, 6, 8 },
-		HUNTER = { 1, 2, 3, 5 },
-		MAGE = { 1, 5 },
-		PALADIN = { 1, 2, 3, 4, 5, 6, 7 },
-		PRIEST = { 1, 5 },
-		ROGUE = { 1, 2, 5 },
-		SHAMAN = { 1, 2, 3, 5, 6, 9 },
-		WARLOCK = { 1, 5 },
-		WARRIOR = { 1, 2, 3, 4, 5, 6 },
+		DEATHKNIGHT = { 0, 1, 2, 3, 4, 5, 6, 10 },
+		DRUID = { 0, 1, 2, 5, 6, 8 },
+		HUNTER = { 0, 1, 2, 3, 5 },
+		MAGE = { 0, 1, 5 },
+		PALADIN = { 0, 1, 2, 3, 4, 5, 6, 7 },
+		PRIEST = { 0, 1, 5 },
+		ROGUE = { 0, 1, 2, 5 },
+		SHAMAN = { 0, 1, 2, 3, 5, 6, 9 },
+		WARLOCK = { 0, 1, 5 },
+		WARRIOR = { 0, 1, 2, 3, 4, 5, 6 },
 	}
 
 	-- Weapon
@@ -58,10 +58,12 @@ function CheeseSLSLootTracker:determineItemIgnorance(itemId)
 		for _,i in pairs(useableWeapons[englishClass]) do
 			if tonumber(itemSubclassID) == i then
 				-- class can use this, so don't ignore
+				self:Debug("Accepting " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's a usable WEAPON for " .. englishClass)
 				return false
 			end
 		end
 		-- no proficiency found for this weapon, so assume it cannot be used
+		self:Debug("Ignoring " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's not listed as wearable WEAPON for " .. englishClass)
 		return true
 	end
 
@@ -70,14 +72,17 @@ function CheeseSLSLootTracker:determineItemIgnorance(itemId)
 		for _,i in pairs(useableArmor[englishClass]) do
 			if tonumber(itemSubclassID) == i then
 				-- class can use this, so don't ignore
+				self:Debug("Accepting " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's a usable ARMOR for " .. englishClass)
 				return false
 			end
 		end
 		-- no proficiency found for this armor, so assume it cannot be used
+		self:Debug("Ignoring " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's not listed as wearable ARMOR for " .. englishClass)
 		return true
 	end
 
 	-- not a weapon or armor, so let's not ignore this
+	self:Debug("Accepting " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's neither WEAPON nor ARMOR")
 	return false
 
 end
