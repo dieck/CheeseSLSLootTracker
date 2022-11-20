@@ -94,7 +94,9 @@ function CheeseSLSLootTracker:addLoot(itemLink, playerName, queueTime, uuid, win
 	-- item ignorance assessment will call to GetItemInfo(). If we don't get data just get, will be retried when showing the GUI
 	local itemIgnorance = self:determineItemIgnorance(itemId)
 	if itemIgnorance then
-		CheeseSLSClient.db.profile.ignorelist[itemId] = time()
+		if CheeseSLSClient.db.profile.notificationHandling[tonumber(itemId)] == nil then
+			CheeseSLSClient.db.profile.notificationHandling[tonumber(itemId)] = "IGNORE"
+		end
 	end
 
 	-- avoid doublettes within +-5sec. Yes, this might be a problem if dual items drop, but could only be T tokens anyway.
