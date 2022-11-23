@@ -14,7 +14,7 @@ function CheeseSLSLootTracker:determineItemIgnorance(itemId)
 	-- call asynchronous getItemInfo so it's cached later on
 	-- if we got the data already in cache, even better. But we'll revisit this on showing the GUI
 
-	local itemName, _, _, _, _, itemType, itemSubType, _, _, _, _, itemClassID, itemSubclassID, _, _, _, _ = GetItemInfo(itemId) 
+	local itemName, _, _, _, _, itemType, itemSubType, _, _, _, _, itemClassID, itemSubclassID, _, _, _, _ = GetItemInfo(itemId)
 
 	-- if GetItemInfo did not return anything now, we'll not wait for it
 	if not itemClassID then return nil end

@@ -256,10 +256,10 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 
 			if (CheeseSLSClient) then
 				local handler = CheeseSLSClient.db.profile.notificationHandling[lootItemId] or "X"
-			
+
 				local ddnClient = AceGUI:Create("Dropdown")
 				self.lootTrackDropdowns[historyid] = ddnClient
-				
+
 				ddnClient:SetUserData("lootItemId", lootItemId)
 				ddnClient:SetList(s:GetUserData("clientHandlerList"), s:GetUserData("clientHandlerSort"))
 				ddnClient:SetValue(handler)
