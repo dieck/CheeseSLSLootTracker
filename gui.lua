@@ -35,8 +35,8 @@ end
 
 function CheeseSLSLootTracker:createLootTrackFrame()
 	-- no current loot? don't create frame
-	if not self.db.profile.loothistory then
-		self:Print(L["No loot history to show"] .. " (nil)")
+	if not CheeseSLSLootTracker.db.profile.loothistory then
+		CheeseSLSLootTracker:Print(L["No loot history to show"] .. " (nil)")
 		return
 	end
 
@@ -45,10 +45,10 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	-- delete old entries
 	-- and prepapre to sort loot history while we're at it
 	local keyset={}
-	for historyid,loot in pairs(self.db.profile.loothistory) do
-		if self.db.profile.deletetwohour and tonumber(loot["queueTime"]) < twohoursago then
+	for historyid,loot in pairs(CheeseSLSLootTracker.db.profile.loothistory) do
+		if CheeseSLSLootTracker.db.profile.deletetwohour and tonumber(loot["queueTime"]) < twohoursago then
 			-- remove loot history if requested
-			self.db.profile.loothistory[historyid] = nil
+			CheeseSLSLootTracker.db.profile.loothistory[historyid] = nil
 		else
 			-- insert to keyset for sorting
 			tinsert(keyset, historyid)
@@ -56,8 +56,8 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	end
 
 	-- if there is no loot left to show after possible deletion, stop
-	if self:htlen(self.db.profile.loothistory) == 0 then
-		self:Print(L["No loot history to show"] .. " (#0)")
+	if CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) == 0 then
+		CheeseSLSLootTracker:Print(L["No loot history to show"] .. " (#0)")
 		return
 	end
 
@@ -93,10 +93,10 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 		winner = roundFloored(absolutsizes["winner"]/windowwidth,2),
 	}
 
-	local windowheight = min( 700,  75 + 25 * self:htlen(self.db.profile.loothistory) )
+	local windowheight = min( 700,  75 + 25 * CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) )
 
 	local f = AceGUI:Create("Window")
-	self.lootTrackFrame = f
+	CheeseSLSLootTracker.lootTrackFrame = f
 	f:SetTitle(L["SLS Loot History"])
 	f:SetStatusText("")
 	f:SetLayout("Flow")
@@ -166,9 +166,9 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	s:SetLayout("Flow")
 	scrollcontainer:AddChild(s)
 
-	if not self.lootTrackFrameButtons then self.lootTrackFrameButtons = {} end
-	if not self.lootTrackDropdowns then self.lootTrackDropdowns = {} end
-	if not self.db.profile.alreadyStarted then self.db.profile.alreadyStarted = {} end
+	if not CheeseSLSLootTracker.lootTrackFrameButtons then CheeseSLSLootTracker.lootTrackFrameButtons = {} end
+	if not CheeseSLSLootTracker.lootTrackDropdowns then CheeseSLSLootTracker.lootTrackDropdowns = {} end
+	if not CheeseSLSLootTracker.db.profile.alreadyStarted then CheeseSLSLootTracker.db.profile.alreadyStarted = {} end
 
 	if CheeseSLSClient then
 		if not CheeseSLSClient.db.profile.notificationHandling then CheeseSLSClient.db.profile.notificationHandling = {} end
@@ -187,11 +187,11 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	-- keyset is now sorted in DESCENDING TIME
 	for i = 1, #keyset do
 		local historyid = keyset[i]
-		local loot = self.db.profile.loothistory[ historyid ]
+		local loot = CheeseSLSLootTracker.db.profile.loothistory[ historyid ]
 		local lootItemId = tonumber(loot["itemId"])
 
 		-- set ignorance for CheeseSLSClient, if installed
-		local itemIgnorance = self:determineItemIgnorance(lootItemId)
+		local itemIgnorance = CheeseSLSLootTracker:determineItemIgnorance(lootItemId)
 		if CheeseSLSClient and itemIgnorance then
 			-- only if not defined already
 			if CheeseSLSClient.db.profile.notificationHandling[lootItemId] == nil then
@@ -199,7 +199,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 			end
 		end
 
-		if self.db.profile.limittwohour and tonumber(loot["queueTime"]) < twohoursago then
+		if CheeseSLSLootTracker.db.profile.limittwohour and tonumber(loot["queueTime"]) < twohoursago then
 			counthidden = counthidden + 1
 		else
 			-- show list entry
@@ -258,7 +258,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 				local handler = CheeseSLSClient.db.profile.notificationHandling[lootItemId] or "X"
 
 				local ddnClient = AceGUI:Create("Dropdown")
-				self.lootTrackDropdowns[historyid] = ddnClient
+				CheeseSLSLootTracker.lootTrackDropdowns[historyid] = ddnClient
 
 				ddnClient:SetUserData("lootItemId", lootItemId)
 				ddnClient:SetList(s:GetUserData("clientHandlerList"), s:GetUserData("clientHandlerSort"))
@@ -290,7 +290,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 				btnStart.itemLink = itemLink
 				btnStart.holdingPlayer = loot["playerName"]
 				btnStart.history = historyid
-				self.lootTrackFrameButtons["btnStart" .. historyid] = btnStart
+				CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. historyid] = btnStart
 				btnStart:SetText(L["SLS bid"])
 				btnStart:SetRelativeWidth(relativewidth["btnstartbid"])
 				btnStart:SetCallback("OnClick", function(widget)
@@ -300,7 +300,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 					end
 				end)
 				-- don't enable if already used
-				if self.db.profile.alreadyStarted[historyid] then
+				if CheeseSLSLootTracker.db.profile.alreadyStarted[historyid] then
 					btnStart:SetDisabled(true)
 				end
 				s:AddChild(btnStart)
@@ -312,7 +312,7 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 			lbWinner:SetRelativeWidth(relativewidth["player"])
 			s:AddChild(lbWinner)
 			-- for updating from comms:
-			self.winnerLabels[historyid] = lbWinner
+			CheeseSLSLootTracker.winnerLabels[historyid] = lbWinner
 
 
 		end -- "if,then,else" used instead of a simple "continue" that's missing in lua

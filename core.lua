@@ -122,22 +122,22 @@ CheeseSLSLootTracker.optionsTable = {
 
 function CheeseSLSLootTracker:OnInitialize()
 	-- Code that you want to run when the addon is first loaded goes here.
-	self.db = LibStub("AceDB-3.0"):New("CheeseSLSLootTrackerDB", defaults)
+	CheeseSLSLootTracker.db = LibStub("AceDB-3.0"):New("CheeseSLSLootTrackerDB", defaults)
 
-	LibStub("AceConfig-3.0"):RegisterOptionsTable("CheeseSLSLootTracker", self.optionsTable)
-	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("CheeseSLSLootTracker", "CheeseSLSLootTracker")
+	LibStub("AceConfig-3.0"):RegisterOptionsTable("CheeseSLSLootTracker", CheeseSLSLootTracker.optionsTable)
+	CheeseSLSLootTracker.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("CheeseSLSLootTracker", "CheeseSLSLootTracker")
 
 	-- prepare list
 
-	if self.db.profile.loothistory == nil then
-		self.db.profile.loothistory = {}
+	if CheeseSLSLootTracker.db.profile.loothistory == nil then
+		CheeseSLSLootTracker.db.profile.loothistory = {}
 	end
 
 	-- trigger GetItemInfo for all items in database
 	-- if you had disconnect / relog, cache needs to be rebuild to avoid having to handle GET_ITEM_INFO_RECEIVED stuff at Boss announcements
 	-- so better to load it here. But only once per itemid.
 	local itemIdList = {}
-	for _, hst in pairs(self.db.profile.loothistory) do
+	for _, hst in pairs(CheeseSLSLootTracker.db.profile.loothistory) do
 		itemIdList[tonumber(hst["itemId"])] = tonumber(hst["itemId"])
 	end
 	for itemid,id2 in pairs(itemIdList) do
@@ -146,41 +146,41 @@ function CheeseSLSLootTracker:OnInitialize()
 
 	-- clean up old "rolled for" entries
 	-- won't show button for anything older than 2 hours anyway
-	if self.db.profile.alreadyStarted then
+	if CheeseSLSLootTracker.db.profile.alreadyStarted then
 		local twohoursago = time() - 2*60*60
-		for key,val in pairs(self.db.profile.alreadyStarted) do
+		for key,val in pairs(CheeseSLSLootTracker.db.profile.alreadyStarted) do
 			if val < twohoursago then
-				self.db.profile.alreadyStarted[key] = nil
+				CheeseSLSLootTracker.db.profile.alreadyStarted[key] = nil
 			end
 		end
 	end
 
 	-- session tables for later
-	self.commUUIDseen = {}
-	self.winnerLabels = {}
+	CheeseSLSLootTracker.commUUIDseen = {}
+	CheeseSLSLootTracker.winnerLabels = {}
 
-	self:Print("CheeseSLSLootTracker loaded.")
+	CheeseSLSLootTracker:Print("CheeseSLSLootTracker loaded.")
 end
 
 function CheeseSLSLootTracker:OnEnable()
 	-- Called when the addon is enabled
-	self:RegisterChatCommand("cslsloot", "ChatCommand")
-	self:RegisterChatCommand("slsloot", "ChatCommand");
+	CheeseSLSLootTracker:RegisterChatCommand("cslsloot", "ChatCommand")
+	CheeseSLSLootTracker:RegisterChatCommand("slsloot", "ChatCommand");
 
-	self:RegisterComm(self.commPrefix, "OnCommReceived")
-	self:RegisterComm(self.commPrefixGSDKP, "OnCommReceivedGSDKP")
+	CheeseSLSLootTracker:RegisterComm(CheeseSLSLootTracker.commPrefix, "OnCommReceived")
+	CheeseSLSLootTracker:RegisterComm(CheeseSLSLootTracker.commPrefixGSDKP, "OnCommReceivedGSDKP")
 
-	self:RegisterEvent("CHAT_MSG_LOOT")
+	CheeseSLSLootTracker:RegisterEvent("CHAT_MSG_LOOT")
 
-	-- self:RegisterEvent("LOOT_OPENED")
-	-- self:RegisterEvent("LOOT_CLOSED") -- from wowpedia: Note that this will fire before the last CHAT_MSG_LOOT event for that loot.
+	-- CheeseSLSLootTracker:RegisterEvent("LOOT_OPENED")
+	-- CheeseSLSLootTracker:RegisterEvent("LOOT_CLOSED") -- from wowpedia: Note that this will fire before the last CHAT_MSG_LOOT event for that loot.
 
-	-- self:RegisterEvent("START_LOOT_ROLL")
-	-- self:RegisterEvent("LOOT_ROLLS_COMPLETE") -- so most likely this could as well be before last CHAT_MSG_LOOT
+	-- CheeseSLSLootTracker:RegisterEvent("START_LOOT_ROLL")
+	-- CheeseSLSLootTracker:RegisterEvent("LOOT_ROLLS_COMPLETE") -- so most likely this could as well be before last CHAT_MSG_LOOT
 
 	-- use only TRADE for now, to be ignored. I don't care which kind of Loot it actually was
-	self:RegisterEvent("TRADE_SHOW")
-	self:RegisterEvent("TRADE_CLOSED") -- so most likely this could as well be before last CHAT_MSG_LOOT
+	CheeseSLSLootTracker:RegisterEvent("TRADE_SHOW")
+	CheeseSLSLootTracker:RegisterEvent("TRADE_CLOSED") -- so most likely this could as well be before last CHAT_MSG_LOOT
 end
 
 function CheeseSLSLootTracker:OnDisable()
@@ -199,21 +199,21 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 
 	elseif strlt(inc) == "" then
 
-		self:createLootTrackFrame()
+		CheeseSLSLootTracker:createLootTrackFrame()
 
 	elseif strlt(inc) == "debug" then
-		self.db.profile.debugging = not self.db.profile.debugging
-		if self.db.profile.debugging then
-			self:Print("CheeseSLSLootTracker DEBUGGING " .. L["is enabled."])
+		CheeseSLSLootTracker.db.profile.debugging = not CheeseSLSLootTracker.db.profile.debugging
+		if CheeseSLSLootTracker.db.profile.debugging then
+			CheeseSLSLootTracker:Print("CheeseSLSLootTracker DEBUGGING " .. L["is enabled."])
 		else
-			self:Print("CheeseSLSLootTracker DEBUGGING " .. L["is disabled."])
+			CheeseSLSLootTracker:Print("CheeseSLSLootTracker DEBUGGING " .. L["is disabled."])
 		end
 
 	elseif strlt(inc:sub(0,5)) == "debug" then
 		local itemLink = inc:sub(6)
 		local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", itemLink)
 		local id = tostring(time()) .. "/" .. tostring(itemId) .. "/" .. UnitName("player")
-		self.db.profile.loothistory[id] = {
+		CheeseSLSLootTracker.db.profile.loothistory[id] = {
 			itemId = itemId,
 			itemLink = itemLink,
 			queueTime = time(),
@@ -223,17 +223,17 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 	else
 
 		if (strlt(inc) == "enable") or (strlt(inc) == "enabled") or (strlt(inc) == "on") then
-			self.db.profile.enabled = true
+			CheeseSLSLootTracker.db.profile.enabled = true
 		end
 
 		if (strlt(inc) == "disable") or (strlt(inc) == "disabled") or (strlt(inc) == "off") then
-			self.db.profile.enabled = false
+			CheeseSLSLootTracker.db.profile.enabled = false
 		end
 
-		if self.db.profile.enabled then
-			self:Print("CheeseSLSLootTracker " .. L["is enabled."])
+		if CheeseSLSLootTracker.db.profile.enabled then
+			CheeseSLSLootTracker:Print("CheeseSLSLootTracker " .. L["is enabled."])
 		else
-			self:Print("CheeseSLSLootTracker " .. L["is disabled."])
+			CheeseSLSLootTracker:Print("CheeseSLSLootTracker " .. L["is disabled."])
 		end
 
 	end
@@ -244,7 +244,7 @@ end
 -- /dump CheeseSLSLootTracker.inventory
 
 function CheeseSLSLootTracker:CacheTradeableInventoryPosition()
-	self.inventory = {}
+	CheeseSLSLootTracker.inventory = {}
 
 	local tip = CreateFrame("GameTooltip","Tooltip",nil,"GameTooltipTemplate")
 
@@ -258,10 +258,10 @@ function CheeseSLSLootTracker:CacheTradeableInventoryPosition()
 				for i = 1,tip:NumLines() do
 					if (string.find(_G["TooltipTextLeft"..i]:GetText(), ITEM_BIND_ON_EQUIP)) then
 						-- is BoE
-						self.inventory[tonumber(itemID)] = { bag = bag, slot = slot }
+						CheeseSLSLootTracker.inventory[tonumber(itemID)] = { bag = bag, slot = slot }
 					elseif (string.find(_G["TooltipTextLeft"..i]:GetText(), string.format(BIND_TRADE_TIME_REMAINING, ".*"))) then
 						-- is tradeable (within timer)
-						self.inventory[tonumber(itemID)] = { bag = bag, slot = slot }
+						CheeseSLSLootTracker.inventory[tonumber(itemID)] = { bag = bag, slot = slot }
 					end
 				end
 				tip:Hide()
@@ -273,7 +273,7 @@ end
 
 function CheeseSLSLootTracker:TRADE_SHOW()
 	-- to ignore trade windows, which also give the EXACT SAME CHAT_MSG_LOOT. WTF Blizzard.
-	self.tradeWindow = true
+	CheeseSLSLootTracker.tradeWindow = true
 
 	local tradePartner = GetUnitName("NPC", true)
 
@@ -291,7 +291,7 @@ function CheeseSLSLootTracker:TRADE_SHOW()
 	-- and in doubt, you'd have to do it by hand - just as years before this change ;)
 	local twohoursago = time() - 2*60*60
 
-	for historyid,loot in pairs(self.db.profile.loothistory) do
+	for historyid,loot in pairs(CheeseSLSLootTracker.db.profile.loothistory) do
 		-- check if still tradeable anyway
 		if tonumber(loot["queueTime"]) >= twohoursago then
 			if loot["winner"] == tradePartner then
@@ -300,18 +300,18 @@ function CheeseSLSLootTracker:TRADE_SHOW()
 		end
 	end
 
-	self.lastloots = loots
+	CheeseSLSLootTracker.lastloots = loots
 
 	if loots then
-		self:CacheTradeableInventoryPosition()
+		CheeseSLSLootTracker:CacheTradeableInventoryPosition()
 
 		for history,loot in pairs(loots) do
 			local itemLink = loot["itemLink"]
 			local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", itemLink)
 
-			if self.inventory[tonumber(itemId)] then
-				local inv = self.inventory[tonumber(itemId)]
-				self:Debug("Trading " .. itemLink .. " (" .. tostring(itemId) .. ") from inventory " .. tostring(inv["bag"]) .. "/" .. tostring(inv["slot"]) .. " to " .. loot["winner"])
+			if CheeseSLSLootTracker.inventory[tonumber(itemId)] then
+				local inv = CheeseSLSLootTracker.inventory[tonumber(itemId)]
+				CheeseSLSLootTracker:Debug("Trading " .. itemLink .. " (" .. tostring(itemId) .. ") from inventory " .. tostring(inv["bag"]) .. "/" .. tostring(inv["slot"]) .. " to " .. loot["winner"])
 				ClearCursor()
 				PickupContainerItem(inv["bag"], inv["slot"])
 				local tradePos = TradeFrame_GetAvailableSlot()
@@ -327,7 +327,7 @@ end
 
 function CheeseSLSLootTracker:TRADE_CLOSED()
 	-- give CHAT_MSG_LOOT about 1 second to catch up before assuming it's not a trade anymore
-	self:ScheduleTimer(function() CheeseSLSLootTracker.tradeWindow = false end, 1)
+	CheeseSLSLootTracker:ScheduleTimer(function() CheeseSLSLootTracker.tradeWindow = false end, 1)
 end
 
 
@@ -343,8 +343,8 @@ end
 
 
 function CheeseSLSLootTracker:Debug(t)
-	if (self.db.profile.debugging) then
-		self:Print("CheeseSLSLootTracker DEBUG: " .. t)
+	if (CheeseSLSLootTracker.db.profile.debugging) then
+		CheeseSLSLootTracker:Print("CheeseSLSLootTracker DEBUG: " .. t)
 	end
 end
 
