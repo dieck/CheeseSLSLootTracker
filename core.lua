@@ -158,6 +158,8 @@ function CheeseSLSLootTracker:OnInitialize()
 	-- session tables for later
 	CheeseSLSLootTracker.commUUIDseen = {}
 	CheeseSLSLootTracker.winnerLabels = {}
+	
+	CheeseSLSLootTracker.GetItemInfoQueue = {}
 
 	CheeseSLSLootTracker:Print("CheeseSLSLootTracker loaded.")
 end
@@ -181,6 +183,8 @@ function CheeseSLSLootTracker:OnEnable()
 	-- use only TRADE for now, to be ignored. I don't care which kind of Loot it actually was
 	CheeseSLSLootTracker:RegisterEvent("TRADE_SHOW")
 	CheeseSLSLootTracker:RegisterEvent("TRADE_CLOSED") -- so most likely this could as well be before last CHAT_MSG_LOOT
+
+	CheeseSLSLootTracker:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 end
 
 function CheeseSLSLootTracker:OnDisable()
@@ -210,15 +214,10 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 		end
 
 	elseif strlt(inc:sub(0,5)) == "debug" then
+	
 		local itemLink = inc:sub(6)
-		local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", itemLink)
-		local id = tostring(time()) .. "/" .. tostring(itemId) .. "/" .. UnitName("player")
-		CheeseSLSLootTracker.db.profile.loothistory[id] = {
-			itemId = itemId,
-			itemLink = itemLink,
-			queueTime = time(),
-			playerName = UnitName("player")
-		}
+		local playerName = UnitName("player")
+		CheeseSLSLootTracker:receiveLoot(itemLink, playerName)
 
 	else
 
@@ -240,8 +239,6 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 
 end
 
--- /script CheeseSLSLootTracker:CacheTradeableInventoryPosition()
--- /dump CheeseSLSLootTracker.inventory
 
 function CheeseSLSLootTracker:CacheTradeableInventoryPosition()
 	CheeseSLSLootTracker.inventory = {}
@@ -275,6 +272,8 @@ function CheeseSLSLootTracker:TRADE_SHOW()
 	-- to ignore trade windows, which also give the EXACT SAME CHAT_MSG_LOOT. WTF Blizzard.
 	CheeseSLSLootTracker.tradeWindow = true
 
+
+    -- if we have a winner, put winnings in trade window
 	local tradePartner = GetUnitName("NPC", true)
 
 	-- no trade partner found? then I wouldn't put anything in
@@ -368,4 +367,155 @@ function CheeseSLSLootTracker:UUID()
 		end
 	end
 	return table.concat(uuid)
+end
+
+
+-- async handling of cached item infos
+function CheeseSLSLootTracker:GET_ITEM_INFO_RECEIVED(event, itemId, success)
+	if next(CheeseSLSLootTracker.GetItemInfoQueue) == nil then
+		-- GetItemInfoQueue is empty, no need to listen anymore
+		CheeseSLSLootTracker:UnregisterEvent("GET_ITEM_INFO_RECEIVED")
+		return
+	end
+
+	if (CheeseSLSLootTracker.GetItemInfoQueue[itemId]) then
+		for _,q in pairs(CheeseSLSLootTracker.GetItemInfoQueue[itemId]) do
+			if type(q["callback"]) == "function" then
+				-- direct function reference, call it
+				q["callback"](q["param1"], q["param2"], q["param3"])
+			else
+				-- string of function name, use from global namespace
+				if _G[q["callback"]] then 
+					_G[q["callback"]](q["param1"], q["param2"], q["param3"])
+				end
+			end
+		end
+		CheeseSLSLootTracker.GetItemInfoQueue[itemId] = nil
+	end
+	
+	-- is empty now?
+	if next(CheeseSLSLootTracker.GetItemInfoQueue) == nil then
+		-- GetItemInfoQueue is empty, no need to listen anymore
+		CheeseSLSLootTracker:UnregisterEvent("GET_ITEM_INFO_RECEIVED")
+		return
+	end
+end
+
+
+function CheeseSLSLootTracker:QueueGetItemInfo(itemId, callback, param1, param2, param3)	
+	if CheeseSLSLootTracker.GetItemInfoQueue[itemId] == nil then
+		CheeseSLSLootTracker.GetItemInfoQueue[itemId] = {}
+	end
+	
+	-- call GetItemInfo and see if it might be already cached - most likely we won't see a GET_ITEM_INFO_RECEIVED for that then
+	local itemName, itemLink, _ = GetItemInfo(itemId)
+	if itemLink == nil then
+
+		-- need to wait for event
+		CheeseSLSLootTracker:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+	
+		local t = {
+			callback = callback,
+			param1 = param1,
+			param2 = param2,
+			param3 = param3,
+		}
+		tinsert(CheeseSLSLootTracker.GetItemInfoQueue[itemId], t)
+
+	else
+		-- item Link exists, GetItemInfo is already cached
+		
+		if type(callback) == "function" then
+			-- direct function reference, call it
+			callback(param1, param2, param3)
+		else
+			-- string of function name, use from global namespace
+			if _G[callback] then 
+				_G[callback](param1, param2, param3)
+			end
+		end
+	end
+end
+
+
+-- will return TRUE for items to be ignored, nil or false for no action
+function CheeseSLSLootTracker:determineItemIgnorance(itemId)
+
+	-- if we are not auto-ignoring, we will allow (= NOT ignore) all items
+	if not CheeseSLSLootTracker.db.profile.autoignoreunwearable then return false end
+
+	-- call asynchronous getItemInfo so it's cached later on
+	-- if we got the data already in cache, even better. But we'll revisit this on showing the GUI
+
+	local itemName, _, _, _, _, itemType, itemSubType, _, _, _, _, itemClassID, itemSubclassID, _, _, _, _ = GetItemInfo(itemId)
+
+	-- if GetItemInfo did not return anything now, we'll not wait for it
+	if not itemClassID then return nil end
+
+	-- itemType and itemSubType: Be aware that the strings are localized on the clients.
+	-- so we use IDs as per https://wowpedia.fandom.com/wiki/ItemType
+
+	local localizedClass, englishClass, classIndex = UnitClass("player")
+
+	-- Usable weapons
+	-- from https://wowpedia.fandom.com/wiki/ItemType#2:_Weapon and https://wowwiki-archive.fandom.com/wiki/Class_proficiencies
+	local useableWeapons = {
+		DEATHKNIGHT = { 0,1, 7,8, 4,5, 6 },
+		DRUID = { 4,5, 6, 10, 15, 13 },
+		HUNTER = { 0,1, 7,8, 6, 10, 15, 13, 2, 18, 3 },
+		MAGE = { 7, 10, 15, 19 },
+		PALADIN = { 0,1, 7,8, 4,5, 6 },
+		PRIEST = { 4, 10, 15, 19 },
+		ROGUE = { 0, 7, 4, 15, 13, 2, 18, 3, 16 },
+		SHAMAN = { 0,1, 4,5, 10, 15, 13 },
+		WARLOCK = { 7, 10, 15, 19 },
+		WARRIOR = { 0,1, 7,8, 4,5, 6, 10, 15, 13, 2, 18, 3, 16 },
+	}
+
+	-- Useable armor
+	local useableArmor = {
+		DEATHKNIGHT = { 0, 1, 2, 3, 4, 5, 6, 10 },
+		DRUID = { 0, 1, 2, 5, 6, 8 },
+		HUNTER = { 0, 1, 2, 3, 5 },
+		MAGE = { 0, 1, 5 },
+		PALADIN = { 0, 1, 2, 3, 4, 5, 6, 7 },
+		PRIEST = { 0, 1, 5 },
+		ROGUE = { 0, 1, 2, 5 },
+		SHAMAN = { 0, 1, 2, 3, 5, 6, 9 },
+		WARLOCK = { 0, 1, 5 },
+		WARRIOR = { 0, 1, 2, 3, 4, 5, 6 },
+	}
+
+	-- Weapon
+	if tonumber(itemClassID) == 2 then
+		for _,i in pairs(useableWeapons[englishClass]) do
+			if tonumber(itemSubclassID) == i then
+				-- class can use this, so don't ignore
+				CheeseSLSLootTracker:Debug("Accepting " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's a usable WEAPON for " .. englishClass)
+				return false
+			end
+		end
+		-- no proficiency found for this weapon, so assume it cannot be used
+		CheeseSLSLootTracker:Debug("Ignoring " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's not listed as wearable WEAPON for " .. englishClass)
+		return true
+	end
+
+	-- Armor
+	if tonumber(itemClassID) == 4 then
+		for _,i in pairs(useableArmor[englishClass]) do
+			if tonumber(itemSubclassID) == i then
+				-- class can use this, so don't ignore
+				CheeseSLSLootTracker:Debug("Accepting " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's a usable ARMOR for " .. englishClass)
+				return false
+			end
+		end
+		-- no proficiency found for this armor, so assume it cannot be used
+		CheeseSLSLootTracker:Debug("Ignoring " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's not listed as wearable ARMOR for " .. englishClass)
+		return true
+	end
+
+	-- not a weapon or armor, so let's not ignore this
+	CheeseSLSLootTracker:Debug("Accepting " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's neither WEAPON nor ARMOR")
+	return false
+
 end

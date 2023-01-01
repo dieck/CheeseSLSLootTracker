@@ -5,88 +5,6 @@ local deformat = LibStub("LibDeformat-3.0")
 -- get information from CheeseSLSLootTracker
 
 
--- will return TRUE for items to be ignored, nil or false for no action
-function CheeseSLSLootTracker:determineItemIgnorance(itemId)
-
-	-- if we are not auto-ignoring, we will allow (= NOT ignore) all items
-	if not CheeseSLSLootTracker.db.profile.autoignoreunwearable then return false end
-
-	-- call asynchronous getItemInfo so it's cached later on
-	-- if we got the data already in cache, even better. But we'll revisit this on showing the GUI
-
-	local itemName, _, _, _, _, itemType, itemSubType, _, _, _, _, itemClassID, itemSubclassID, _, _, _, _ = GetItemInfo(itemId)
-
-	-- if GetItemInfo did not return anything now, we'll not wait for it
-	if not itemClassID then return nil end
-
-	-- itemType and itemSubType: Be aware that the strings are localized on the clients.
-	-- so we use IDs as per https://wowpedia.fandom.com/wiki/ItemType
-
-	local localizedClass, englishClass, classIndex = UnitClass("player")
-
-	-- Usable weapons
-	-- from https://wowpedia.fandom.com/wiki/ItemType#2:_Weapon and https://wowwiki-archive.fandom.com/wiki/Class_proficiencies
-	local useableWeapons = {
-		DEATHKNIGHT = { 0,1, 7,8, 4,5, 6 },
-		DRUID = { 4,5, 6, 10, 15, 13 },
-		HUNTER = { 0,1, 7,8, 6, 10, 15, 13, 2, 18, 3 },
-		MAGE = { 7, 10, 15, 19 },
-		PALADIN = { 0,1, 7,8, 4,5, 6 },
-		PRIEST = { 4, 10, 15, 19 },
-		ROGUE = { 0, 7, 4, 15, 13, 2, 18, 3, 16 },
-		SHAMAN = { 0,1, 4,5, 10, 15, 13 },
-		WARLOCK = { 7, 10, 15, 19 },
-		WARRIOR = { 0,1, 7,8, 4,5, 6, 10, 15, 13, 2, 18, 3, 16 },
-	}
-
-	-- Useable armor
-	local useableArmor = {
-		DEATHKNIGHT = { 0, 1, 2, 3, 4, 5, 6, 10 },
-		DRUID = { 0, 1, 2, 5, 6, 8 },
-		HUNTER = { 0, 1, 2, 3, 5 },
-		MAGE = { 0, 1, 5 },
-		PALADIN = { 0, 1, 2, 3, 4, 5, 6, 7 },
-		PRIEST = { 0, 1, 5 },
-		ROGUE = { 0, 1, 2, 5 },
-		SHAMAN = { 0, 1, 2, 3, 5, 6, 9 },
-		WARLOCK = { 0, 1, 5 },
-		WARRIOR = { 0, 1, 2, 3, 4, 5, 6 },
-	}
-
-	-- Weapon
-	if tonumber(itemClassID) == 2 then
-		for _,i in pairs(useableWeapons[englishClass]) do
-			if tonumber(itemSubclassID) == i then
-				-- class can use this, so don't ignore
-				CheeseSLSLootTracker:Debug("Accepting " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's a usable WEAPON for " .. englishClass)
-				return false
-			end
-		end
-		-- no proficiency found for this weapon, so assume it cannot be used
-		CheeseSLSLootTracker:Debug("Ignoring " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's not listed as wearable WEAPON for " .. englishClass)
-		return true
-	end
-
-	-- Armor
-	if tonumber(itemClassID) == 4 then
-		for _,i in pairs(useableArmor[englishClass]) do
-			if tonumber(itemSubclassID) == i then
-				-- class can use this, so don't ignore
-				CheeseSLSLootTracker:Debug("Accepting " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's a usable ARMOR for " .. englishClass)
-				return false
-			end
-		end
-		-- no proficiency found for this armor, so assume it cannot be used
-		CheeseSLSLootTracker:Debug("Ignoring " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's not listed as wearable ARMOR for " .. englishClass)
-		return true
-	end
-
-	-- not a weapon or armor, so let's not ignore this
-	CheeseSLSLootTracker:Debug("Accepting " .. itemName .. " (" .. itemClassID .. "/" .. itemSubclassID .. ") because it's neither WEAPON nor ARMOR")
-	return false
-
-end
-
 function CheeseSLSLootTracker:addLoot(itemLink, playerName, queueTime, uuid, winner)
 
 	local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", itemLink)
@@ -243,6 +161,14 @@ function CheeseSLSLootTracker:CHAT_MSG_LOOT(event, text, sender)
 		-- ignore
 		return
 	end
+
+	CheeseSLSLootTracker:receiveLoot(itemLink, playerName, itemCount)
+
+end
+
+function CheeseSLSLootTracker:receiveLoot(itemLink, playerName, itmCount)
+	local itemCount = itmCount or 1
+	local d, itemId, enchantId, jewelId1, jewelId2, jewelId3, jewelId4, suffixId, uniqueId, linkLevel, specializationID, reforgeId, unknown1, unknown2 = strsplit(":", itemLink)
 
 	-- colors:
 	-- if d == "\124cffff8000\124Hitem" then CheeseSLSLootTracker:Print("LEGENDARY") end -- LEGENDARY
