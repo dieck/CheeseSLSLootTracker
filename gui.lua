@@ -40,6 +40,12 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 		return
 	end
 
+	-- already open? reopen next
+	if CheeseSLSLootTracker.lootTrackFrame then
+		CheeseSLSLootTracker.lootTrackFrame:Hide()
+		CheeseSLSLootTracker.lootTrackFrame = nil
+	end
+
 	local twohoursago = time() - 2*60*60
 
 	-- delete old entries
@@ -79,10 +85,11 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 		clientnotifications = 90,
 		btnstartbid = 60,
 		winner = 75,
+		booked = 50,
 	}
 	local windowwidth = absolutsizes["timestamp"] + absolutsizes["icon"] + absolutsizes["item"] + absolutsizes["player"] + absolutsizes["winner"]
 	if (CheeseSLSClient) then windowwidth = windowwidth + absolutsizes["clientnotifications"] end
-	if (CheeseSLS) then	windowwidth = windowwidth + absolutsizes["btnstartbid"] end
+	if (CheeseSLS) then	windowwidth = windowwidth + absolutsizes["btnstartbid"] + absolutsizes["booked"] end
 	local relativewidth = {
 		timestamp = roundFloored(absolutsizes["timestamp"]/windowwidth,2),
 		icon = roundFloored(absolutsizes["icon"]/windowwidth,2),
@@ -91,20 +98,24 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 		clientnotifications = roundFloored(absolutsizes["clientnotifications"]/windowwidth,2),
 		btnstartbid = roundFloored(absolutsizes["btnstartbid"]/windowwidth,2),
 		winner = roundFloored(absolutsizes["winner"]/windowwidth,2),
+		booked = roundFloored(absolutsizes["booked"]/windowwidth,2),
 	}
 
-	local windowheight = min( 700,  75 + 25 * CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) )
+	local windowheight = min( 500,  75 + 25 * CheeseSLSLootTracker:htlen(CheeseSLSLootTracker.db.profile.loothistory) )
 
 	local f = AceGUI:Create("Window")
 	CheeseSLSLootTracker.lootTrackFrame = f
 	f:SetTitle(L["SLS Loot History"])
-	f:SetStatusText("")
+	f:SetStatusText(#keyset .. " loots")
 	f:SetLayout("Flow")
 	f:SetWidth(windowwidth)
 	f:SetHeight(windowheight)
 --	f:SetPoint('TOPLEFT',UIParent,'TOPLEFT',30,30)
 
-	f:SetCallback("OnClose",function(widget) AceGUI:Release(widget) end)
+	f:SetCallback("OnClose",function(widget)
+		AceGUI:Release(widget)
+		CheeseSLSLootTracker.lootTrackFrame = nil
+	end)
 
 	-- close on escape
 	local frameName = "CheeseSLSLootTrackerLootTrackFrame"
@@ -152,6 +163,14 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 	hdrWinner:SetColor(204,0,204)
 	hdrWinner:SetRelativeWidth(relativewidth["winner"])
 	f:AddChild(hdrWinner)
+
+	if (CheeseSLS) then
+		local hdrBooked = AceGUI:Create("InteractiveLabel")
+		hdrBooked:SetText("Booked")
+		hdrBooked:SetColor(204,0,204)
+		hdrBooked:SetRelativeWidth(relativewidth["booked"])
+		f:AddChild(hdrBooked)
+	end
 
 
 	-- content
@@ -286,17 +305,20 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 
 			if (CheeseSLS) then
 				local btnStart = AceGUI:Create("Button")
-				btnStart.historyid = historyid
-				btnStart.itemLink = itemLink
-				btnStart.holdingPlayer = loot["playerName"]
-				btnStart.history = historyid
+				btnStart:SetUserData("historyid", historyid)
+				btnStart:SetUserData("itemLink", itemLink)
+				btnStart:SetUserData("holdingPlayer", loot["playerName"])
+
 				CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. historyid] = btnStart
 				btnStart:SetText(L["SLS bid"])
 				btnStart:SetRelativeWidth(relativewidth["btnstartbid"])
 				btnStart:SetCallback("OnClick", function(widget)
-					if CheeseSLS:StartBidding(widget.itemLink, widget.holdingPlayer, widget.historyid) then
-						CheeseSLSLootTracker.db.profile.alreadyStarted[widget.historyid] = time()
-						CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. widget.historyid]:SetDisabled(true)
+					local historyid = widget:GetUserData("historyid")
+					local itemLink = widget:GetUserData("itemLink")
+					local holdingPlayer = widget:GetUserData("holdingPlayer")
+					if CheeseSLS:StartBidding(itemLink, holdingPlayer, historyid) then
+						CheeseSLSLootTracker.db.profile.alreadyStarted[historyid] = time()
+						CheeseSLSLootTracker.lootTrackFrameButtons["btnStart" .. historyid]:SetDisabled(true)
 					end
 				end)
 				-- don't enable if already used
@@ -313,6 +335,30 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 			s:AddChild(lbWinner)
 			-- for updating from comms:
 			CheeseSLSLootTracker.winnerLabels[historyid] = lbWinner
+
+
+			if (CheeseSLS) then
+				local winnerdkp = loot["winnerdkp"] or 0
+				winnerdkp = tonumber(winnerdkp)
+				local btnBooked = AceGUI:Create("Button")
+				btnBooked:SetUserData("itemLink", itemLink)
+				btnBooked:SetUserData("winner", loot["winner"])
+				btnBooked:SetUserData("winnerdkp", winnerdkp)
+				btnBooked:SetText(winnerdkp)
+				btnBooked:SetRelativeWidth(relativewidth["booked"])
+				btnBooked:SetDisabled(not (loot["winner"]))
+				btnBooked:SetCallback("OnClick", function(widget)
+					local user = btnBooked:GetUserData("winner")
+					local dkp = btnBooked:GetUserData("winnerdkp") or 0
+					local itemlink = btnBooked:GetUserData("itemLink")
+					CheeseSLS:createRequestDialogFrame(user, -tonumber(dkp), itemlink)
+					CheeseSLSLootTracker:Debug("Calling CheeseSLS:createRequestDialogFrame for user " .. user .. ", dkp " .. dkp .. ", itemlink " .. itemlink)
+				end)
+				s:AddChild(btnBooked)
+				CheeseSLSLootTracker.bookedButtons[historyid] = btnBooked
+				CheeseSLSLootTracker.lootTrackFrameButtons["btnBooked" .. historyid] = btnBooked
+			end
+
 
 
 		end -- "if,then,else" used instead of a simple "continue" that's missing in lua

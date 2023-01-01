@@ -5,7 +5,7 @@ local deformat = LibStub("LibDeformat-3.0")
 -- get information from CheeseSLSLootTracker
 
 
-function CheeseSLSLootTracker:addLoot(itemLink, playerName, queueTime, uuid, winner)
+function CheeseSLSLootTracker:addLoot(itemLink, playerName, queueTime, uuid, winner, winnerdkp, loothistoryid)
 
 	local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", itemLink)
 
@@ -24,29 +24,31 @@ function CheeseSLSLootTracker:addLoot(itemLink, playerName, queueTime, uuid, win
 			if tonumber(val["queueTime"]) <= tonumber(queueTime)+5 and tonumber(val["queueTime"]) >= tonumber(queueTime)-5 then
 				CheeseSLSLootTracker:Debug("Asked to queue loot but found this item already as " .. val["uuid"])
 
-				-- if times to not match exactly, re-book item later (so all will match everywhere)
+				-- if times do not match exactly, re-book item (some lines down), so all will match everywhere
 				if tonumber(val["queueTime"]) ~= tonumber(queueTime) then isKnown = key end
 			end
 		end
 	end
-
-	local id = tostring(queueTime) .. "/" .. tostring(itemId) .. "/" .. tostring(playerName)
-	CheeseSLSLootTracker.db.profile.loothistory[id] = {
-		uuid = uuid,
-		itemId = itemId,
-		itemLink = itemLink,
-		queueTime = queueTime,
-		playerName = playerName,
-		winner = winner
-	}
 
 	-- remove loot if it was previously known (overwritten with new id, so all are the same around synced addons)
 	if isKnown then
 		CheeseSLSLootTracker.db.profile.loothistory[isKnown] = nil
 	end
 
-	CheeseSLSLootTracker:Debug("incoming LOOT_QUEUED: " .. tostring(itemLink) .. " from " .. tostring(playerName))
+	local newid = tostring(queueTime) .. "/" .. tostring(itemId) .. "/" .. tostring(playerName)
+	local id = loothistoryid or newid
+	CheeseSLSLootTracker.db.profile.loothistory[id] = {
+		tipId = id,
+		uuid = uuid,
+		itemId = itemId,
+		itemLink = itemLink,
+		queueTime = queueTime,
+		playerName = playerName,
+		winner = winner,
+		winnerdkp = winnerdkp,
+	}
 
+	CheeseSLSLootTracker:Debug("incoming LOOT_QUEUED: " .. tostring(itemLink) .. " from " .. tostring(playerName))
 end
 
 
@@ -89,11 +91,33 @@ function CheeseSLSLootTracker:OnCommReceived(prefix, message, distribution, send
 	end
 
 	if d["command"] == "WINNING_NOTIFICATION" then
+		if not CheeseSLSLootTracker.db.profile.loothistory[d["lootTrackerId"]] then
+			if d["loothistory"] then
+				CheeseSLSLootTracker:addLoot(d["loothistory"]["itemLink"], d["loothistory"]["playerName"], d["loothistory"]["queueTime"], d["loothistory"]["uuid"], d["loothistory"]["winner"], d["loothistory"]["winnerdkp"], d["lootTrackerId"])
+
+				if CheeseSLSLootTracker.lootTrackFrame then
+					CheeseSLSLootTracker:Print("Received new item (by winning notification). You will need to re-open CheeseSLS Loot Tracker window.")
+				end
+
+			end
+		end
+
 		if CheeseSLSLootTracker.db.profile.loothistory[d["lootTrackerId"]] then
 			CheeseSLSLootTracker.db.profile.loothistory[d["lootTrackerId"]]["winner"] = d["winner"]
+			CheeseSLSLootTracker.db.profile.loothistory[d["lootTrackerId"]]["winnerdkp"] = d["winnerdkp"]
 		end
+
 		-- update label if available
-		if CheeseSLSLootTracker.winnerLabels[d["lootTrackerId"]] then CheeseSLSLootTracker.winnerLabels[d["lootTrackerId"]]:SetText(d["winner"]) end
+		if CheeseSLSLootTracker.winnerLabels[d["lootTrackerId"]] then
+			CheeseSLSLootTracker.winnerLabels[d["lootTrackerId"]]:SetText(d["winner"])
+		end
+
+		-- update booking button if available
+		if CheeseSLSLootTracker.lootTrackFrameButtons["btnBooked" .. d["lootTrackerId"]] then
+			CheeseSLSLootTracker.lootTrackFrameButtons["btnBooked" .. d["lootTrackerId"]]:SetText(d["winnerdkp"])
+			CheeseSLSLootTracker.lootTrackFrameButtons["btnBooked" .. d["lootTrackerId"]]:SetDisabled(false)
+		end
+
 	end
 end
 
@@ -101,14 +125,12 @@ end
 -- send out "new" loot to other CheeseSLSLootTracker
 
 function CheeseSLSLootTracker:sendLootQueued(itemLink, playerName, itemCount, queueTime, uuid)
-	local queueT = queueTime or time()
-	local uu = uuid or CheeseSLSLootTracker:UUID()
 	local commmsg = {
 		command = "LOOT_QUEUED",
 		version = CheeseSLSLootTracker.commVersion,
-		uuid = uu,
+		uuid = uuid,
 		itemLink = itemLink,
-		queueTime = queueT,
+		queueTime = queueTime,
 		playerName= playerName,
 		itemCount = itemCount
 	}
@@ -171,14 +193,15 @@ function CheeseSLSLootTracker:receiveLoot(itemLink, playerName, itmCount)
 	local d, itemId, enchantId, jewelId1, jewelId2, jewelId3, jewelId4, suffixId, uniqueId, linkLevel, specializationID, reforgeId, unknown1, unknown2 = strsplit(":", itemLink)
 
 	-- colors:
-	-- if d == "\124cffff8000\124Hitem" then CheeseSLSLootTracker:Print("LEGENDARY") end -- LEGENDARY
-	-- if d == "\124cffa335ee\124Hitem" then CheeseSLSLootTracker:Print("Epic") end -- Epic
-	-- if d == "\124cff0070dd\124Hitem" then CheeseSLSLootTracker:Print("Rare") end -- Rare
-	-- if d == "\124cff1eff00\124Hitem" then CheeseSLSLootTracker:Print("Uncommon") end -- Uncommon
-	-- if d == "\124cffffffff\124Hitem" then CheeseSLSLootTracker:Print("Common") end -- Common
-	-- if d == "\124cff9d9d9d\124Hitem" then CheeseSLSLootTracker:Print("Trash") end -- Greys
+	if d == "\124cffff8000\124Hitem" then CheeseSLSLootTracker:Print("LEGENDARY") end -- LEGENDARY
+	if d == "\124cffa335ee\124Hitem" then CheeseSLSLootTracker:Print("Epic") end -- Epic
+	if d == "\124cff0070dd\124Hitem" then CheeseSLSLootTracker:Print("Rare") end -- Rare
+	if d == "\124cff1eff00\124Hitem" then CheeseSLSLootTracker:Print("Uncommon") end -- Uncommon
+	if d == "\124cffffffff\124Hitem" then CheeseSLSLootTracker:Print("Common") end -- Common
+	if d == "\124cff9d9d9d\124Hitem" then CheeseSLSLootTracker:Print("Trash") end -- Greys
 
-	if (CheeseSLSLootTracker.db.profile.debugging and CheeseSLSLootTracker.db.profile.debuggingTrash) or (d == "\124cffff8000\124Hitem") or (d == "\124cffa335ee\124Hitem") then
+	if (CheeseSLSLootTracker.db.profile.debugging and CheeseSLSLootTracker.db.profile.debuggingTrash) or (d == "\124cffff8000\124Hitem") or (d == "\124cffa335ee\124Hitem") or (d:sub(3,9) == "cffa335")then
+
 		local queueT = time()
 		local uuid = CheeseSLSLootTracker:UUID()
 

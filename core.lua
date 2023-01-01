@@ -144,6 +144,8 @@ function CheeseSLSLootTracker:OnInitialize()
 		GetItemInfo(itemid)
 	end
 
+	if not CheeseSLSLootTracker.db.profile.alreadyStarted then CheeseSLSLootTracker.db.profile.alreadyStarted = {} end
+
 	-- clean up old "rolled for" entries
 	-- won't show button for anything older than 2 hours anyway
 	if CheeseSLSLootTracker.db.profile.alreadyStarted then
@@ -158,7 +160,8 @@ function CheeseSLSLootTracker:OnInitialize()
 	-- session tables for later
 	CheeseSLSLootTracker.commUUIDseen = {}
 	CheeseSLSLootTracker.winnerLabels = {}
-	
+	CheeseSLSLootTracker.bookedButtons = {}
+
 	CheeseSLSLootTracker.GetItemInfoQueue = {}
 
 	CheeseSLSLootTracker:Print("CheeseSLSLootTracker loaded.")
@@ -214,7 +217,6 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 		end
 
 	elseif strlt(inc:sub(0,5)) == "debug" then
-	
 		local itemLink = inc:sub(6)
 		local playerName = UnitName("player")
 		CheeseSLSLootTracker:receiveLoot(itemLink, playerName)
@@ -271,7 +273,6 @@ end
 function CheeseSLSLootTracker:TRADE_SHOW()
 	-- to ignore trade windows, which also give the EXACT SAME CHAT_MSG_LOOT. WTF Blizzard.
 	CheeseSLSLootTracker.tradeWindow = true
-
 
     -- if we have a winner, put winnings in trade window
 	local tradePartner = GetUnitName("NPC", true)
@@ -385,14 +386,14 @@ function CheeseSLSLootTracker:GET_ITEM_INFO_RECEIVED(event, itemId, success)
 				q["callback"](q["param1"], q["param2"], q["param3"])
 			else
 				-- string of function name, use from global namespace
-				if _G[q["callback"]] then 
+				if _G[q["callback"]] then
 					_G[q["callback"]](q["param1"], q["param2"], q["param3"])
 				end
 			end
 		end
 		CheeseSLSLootTracker.GetItemInfoQueue[itemId] = nil
 	end
-	
+
 	-- is empty now?
 	if next(CheeseSLSLootTracker.GetItemInfoQueue) == nil then
 		-- GetItemInfoQueue is empty, no need to listen anymore
@@ -402,18 +403,18 @@ function CheeseSLSLootTracker:GET_ITEM_INFO_RECEIVED(event, itemId, success)
 end
 
 
-function CheeseSLSLootTracker:QueueGetItemInfo(itemId, callback, param1, param2, param3)	
+function CheeseSLSLootTracker:QueueGetItemInfo(itemId, callback, param1, param2, param3)
 	if CheeseSLSLootTracker.GetItemInfoQueue[itemId] == nil then
 		CheeseSLSLootTracker.GetItemInfoQueue[itemId] = {}
 	end
-	
+
 	-- call GetItemInfo and see if it might be already cached - most likely we won't see a GET_ITEM_INFO_RECEIVED for that then
 	local itemName, itemLink, _ = GetItemInfo(itemId)
 	if itemLink == nil then
 
 		-- need to wait for event
 		CheeseSLSLootTracker:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-	
+
 		local t = {
 			callback = callback,
 			param1 = param1,
@@ -424,13 +425,13 @@ function CheeseSLSLootTracker:QueueGetItemInfo(itemId, callback, param1, param2,
 
 	else
 		-- item Link exists, GetItemInfo is already cached
-		
+
 		if type(callback) == "function" then
 			-- direct function reference, call it
 			callback(param1, param2, param3)
 		else
 			-- string of function name, use from global namespace
-			if _G[callback] then 
+			if _G[callback] then
 				_G[callback](param1, param2, param3)
 			end
 		end
