@@ -7,7 +7,6 @@ CheeseSLSLootTracker.commPrefixGSDKP = "GSDKPCSLS-1"
 
 local defaults = {
 	profile = {
-		enabled = true,
 		debugging = false,
 		debuggingTrash = false,
 		limittwohour = true,
@@ -19,18 +18,6 @@ local defaults = {
 CheeseSLSLootTracker.optionsTable = {
 	type = "group",
 	args = {
-		enabled = {
-			order = 10,
-			name = L["Enabled"],
-			desc = L["Enabled"],
-			type = "toggle",
-			set = function(info,val)
-				CheeseSLSLootTracker.db.profile.enabled = val
-			end,
-			get = function(info) return CheeseSLSLootTracker.db.profile.enabled end,
-		},
-		newline19 = { name="", type="description", order=19 },
-
 		debugging = {
 			order = 20,
 			name = L["Debug"],
@@ -221,22 +208,6 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 		local playerName = UnitName("player")
 		CheeseSLSLootTracker:receiveLoot(itemLink, playerName)
 
-	else
-
-		if (strlt(inc) == "enable") or (strlt(inc) == "enabled") or (strlt(inc) == "on") then
-			CheeseSLSLootTracker.db.profile.enabled = true
-		end
-
-		if (strlt(inc) == "disable") or (strlt(inc) == "disabled") or (strlt(inc) == "off") then
-			CheeseSLSLootTracker.db.profile.enabled = false
-		end
-
-		if CheeseSLSLootTracker.db.profile.enabled then
-			CheeseSLSLootTracker:Print("CheeseSLSLootTracker " .. L["is enabled."])
-		else
-			CheeseSLSLootTracker:Print("CheeseSLSLootTracker " .. L["is disabled."])
-		end
-
 	end
 
 end
@@ -248,12 +219,16 @@ function CheeseSLSLootTracker:CacheTradeableInventoryPosition()
 	local tip = CreateFrame("GameTooltip","Tooltip",nil,"GameTooltipTemplate")
 
 	for bag = BACKPACK_CONTAINER, NUM_BAG_SLOTS do
-		for slot = 1, GetContainerNumSlots(bag) do
-			local icon, itemCount, _locked, quality, readable, lootable, itemLink, isFiltered, noValue, itemID = GetContainerItemInfo(bag, slot)
+		for slot = 1, C_Container.GetContainerNumSlots(bag) do
+			local icon, itemCount, _locked, quality, readable, lootable, itemLink, isFiltered, noValue, itemID = C_Container.GetContainerItemInfo(bag, slot)
 			if itemID then
 				tip:SetOwner(UIParent, "ANCHOR_NONE")
 				tip:SetBagItem(bag, slot)
 				tip:Show()
+				
+				data = C_TooltipInfo.GetBagItem(bag, slot)
+
+				
 				for i = 1,tip:NumLines() do
 					if (string.find(_G["TooltipTextLeft"..i]:GetText(), ITEM_BIND_ON_EQUIP)) then
 						-- is BoE
@@ -341,10 +316,39 @@ function CheeseSLSLootTracker:htlen(ht)
 	return #keyset
 end
 
+-- for debug outputs
+local function tprint (tbl, indent)
+  if not indent then indent = 0 end
+  local toprint = string.rep(" ", indent) .. "{\r\n"
+  indent = indent + 2
+  for k, v in pairs(tbl) do
+    toprint = toprint .. string.rep(" ", indent)
+    if (type(k) == "number") then
+      toprint = toprint .. "[" .. k .. "] = "
+    elseif (type(k) == "string") then
+      toprint = toprint  .. k ..  "= "
+    end
+    if (type(v) == "number") then
+      toprint = toprint .. v .. ",\r\n"
+    elseif (type(v) == "string") then
+      toprint = toprint .. "\"" .. v .. "\",\r\n"
+    elseif (type(v) == "table") then
+      toprint = toprint .. tprint(v, indent + 2) .. ",\r\n"
+    else
+      toprint = toprint .. "\"" .. tostring(v) .. "\",\r\n"
+    end
+  end
+  toprint = toprint .. string.rep(" ", indent-2) .. "}"
+  return toprint
+end
 
 function CheeseSLSLootTracker:Debug(t)
 	if (CheeseSLSLootTracker.db.profile.debugging) then
-		CheeseSLSLootTracker:Print("CheeseSLSLootTracker DEBUG: " .. t)
+		if type(t) == "table" then
+			CheeseSLSLootTracker:Print("CheeseSLSLootTracker DEBUG: " .. tprint(t))
+		else
+			CheeseSLSLootTracker:Print("CheeseSLSLootTracker DEBUG: " .. t)
+		end
 	end
 end
 

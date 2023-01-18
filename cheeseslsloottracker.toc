@@ -1,8 +1,8 @@
-## Interface: 30400
+## Interface: 30401
 ## Title: CheeseSLSLootTracker
 ## Notes: Loot Tracker Addon for CheeseSLS usage
 ## Author: dieck
-## Version: 20230101
+## Version: 20230118
 ## SavedVariables: CheeseSLSLootTrackerDB
 
 embeds.xml
