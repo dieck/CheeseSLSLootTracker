@@ -204,6 +204,49 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 			CheeseSLSLootTracker:Print("CheeseSLSLootTracker DEBUGGING " .. L["is disabled."])
 		end
 
+	elseif strlt(inc) == "clear and prefill ulduar" then
+	
+		if AtlasLoot then
+
+			CheeseSLSLootTracker.db.profile.loothistory = {}
+
+			local fctCallback = function(itemId, encName) 
+				local itemName, itemLink, _ = GetItemInfo(itemId)
+				if itemLink then CheeseSLSLootTracker:receiveLoot(itemLink,encName) end
+			end
+
+			local itemIdsToAdd = {}
+
+			if AtlasLoot.ItemDB:Get("AtlasLootClassic_DungeonsAndRaids") then
+				if AtlasLoot.ItemDB:Get("AtlasLootClassic_DungeonsAndRaids")["Ulduar"] then
+					if AtlasLoot.ItemDB:Get("AtlasLootClassic_DungeonsAndRaids")["Ulduar"]["items"] then
+						local ulduaritems = AtlasLoot.ItemDB:Get("AtlasLootClassic_DungeonsAndRaids")["Ulduar"]["items"]
+
+						for _, encounter in pairs(ulduaritems) do
+							for diff, diffdata in pairs(AtlasLoot.DIFFICULTY) do
+								if encounter[diff] then for _, itemset in pairs(encounter[diff]) do
+									local itemId = itemset[2]
+									if (itemId) and (tonumber(itemId)) then
+										if itemIdsToAdd[tonumber(itemId)] then
+											itemIdsToAdd[tonumber(itemId)] = itemIdsToAdd[tonumber(itemId)] .. ", ".. encounter["name"]
+										else 
+											itemIdsToAdd[tonumber(itemId)] = encounter["name"]
+										end
+									end
+								end end -- for & if
+							end
+						end
+						
+					end
+				end
+			end
+
+			for itemId, encName in pairs(itemIdsToAdd) do
+				CheeseSLSLootTracker:QueueGetItemInfo(itemId, fctCallback, itemId, encName)
+			end
+			
+		end
+
 	elseif strlt(inc:sub(0,5)) == "debug" then
 		local itemLink = inc:sub(6)
 		local playerName = UnitName("player")
@@ -331,6 +374,15 @@ function CheeseSLSLootTracker:htlen(ht)
 	return #keyset
 end
 
+function CheeseSLSLootTracker:keys(ht)
+	if ht == nil then return nil end
+	local keyset={}
+	for key,val in pairs(ht) do
+		tinsert(keyset, key)
+	end
+	return keyset
+end
+
 -- for debug outputs
 local function tprint (tbl, indent)
   if not indent then indent = 0 end
@@ -359,7 +411,9 @@ end
 
 function CheeseSLSLootTracker:Debug(t)
 	if (CheeseSLSLootTracker.db.profile.debugging) then
-		if type(t) == "table" then
+		if t == nil then
+			CheeseSLSLootTracker:Print("CheeseSLSLootTracker DEBUG: -nil-")
+		elseif type(t) == "table" then
 			CheeseSLSLootTracker:Print("CheeseSLSLootTracker DEBUG: " .. tprint(t))
 		else
 			CheeseSLSLootTracker:Print("CheeseSLSLootTracker DEBUG: " .. t)
@@ -392,14 +446,16 @@ end
 
 -- async handling of cached item infos
 function CheeseSLSLootTracker:GET_ITEM_INFO_RECEIVED(event, itemId, success)
+	local itemIdNum = tonumber(itemId)
+
 	if next(CheeseSLSLootTracker.GetItemInfoQueue) == nil then
 		-- GetItemInfoQueue is empty, no need to listen anymore
 		CheeseSLSLootTracker:UnregisterEvent("GET_ITEM_INFO_RECEIVED")
 		return
 	end
 
-	if (CheeseSLSLootTracker.GetItemInfoQueue[itemId]) then
-		for _,q in pairs(CheeseSLSLootTracker.GetItemInfoQueue[itemId]) do
+	if (CheeseSLSLootTracker.GetItemInfoQueue[itemIdNum]) then
+		for _,q in pairs(CheeseSLSLootTracker.GetItemInfoQueue[itemIdNum]) do
 			if type(q["callback"]) == "function" then
 				-- direct function reference, call it
 				q["callback"](q["param1"], q["param2"], q["param3"])
@@ -410,7 +466,7 @@ function CheeseSLSLootTracker:GET_ITEM_INFO_RECEIVED(event, itemId, success)
 				end
 			end
 		end
-		CheeseSLSLootTracker.GetItemInfoQueue[itemId] = nil
+		CheeseSLSLootTracker.GetItemInfoQueue[itemIdNum] = nil
 	end
 
 	-- is empty now?
@@ -423,12 +479,13 @@ end
 
 
 function CheeseSLSLootTracker:QueueGetItemInfo(itemId, callback, param1, param2, param3)
-	if CheeseSLSLootTracker.GetItemInfoQueue[itemId] == nil then
-		CheeseSLSLootTracker.GetItemInfoQueue[itemId] = {}
+	local itemIdNum = tonumber(itemId)
+	if CheeseSLSLootTracker.GetItemInfoQueue[itemIdNum] == nil then
+		CheeseSLSLootTracker.GetItemInfoQueue[itemIdNum] = {}
 	end
 
 	-- call GetItemInfo and see if it might be already cached - most likely we won't see a GET_ITEM_INFO_RECEIVED for that then
-	local itemName, itemLink, _ = GetItemInfo(itemId)
+	local itemName, itemLink, _ = GetItemInfo(itemIdNum)
 	if itemLink == nil then
 
 		-- need to wait for event
@@ -440,7 +497,7 @@ function CheeseSLSLootTracker:QueueGetItemInfo(itemId, callback, param1, param2,
 			param2 = param2,
 			param3 = param3,
 		}
-		tinsert(CheeseSLSLootTracker.GetItemInfoQueue[itemId], t)
+		tinsert(CheeseSLSLootTracker.GetItemInfoQueue[itemIdNum], t)
 
 	else
 		-- item Link exists, GetItemInfo is already cached

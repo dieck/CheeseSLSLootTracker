@@ -187,6 +187,7 @@ end
 
 function CheeseSLSLootTracker:receiveLoot(itemLink, playerName, itmCount)
 	local itemCount = itmCount or 1
+
 	local d, itemId, enchantId, jewelId1, jewelId2, jewelId3, jewelId4, suffixId, uniqueId, linkLevel, specializationID, reforgeId, unknown1, unknown2 = strsplit(":", itemLink)
 
 	-- colors:
