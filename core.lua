@@ -281,19 +281,33 @@ function CheeseSLSLootTracker:TRADE_SHOW()
 	if loots then
 		CheeseSLSLootTracker:CacheTradeableInventoryPosition()
 
+		local cntTrades = 0
+
 		for history,loot in pairs(loots) do
 			local itemLink = loot["itemLink"]
 			local _, itemId, _, _, _, _, _, _, _, _, _, _, _, _ = strsplit(":", itemLink)
 
 			if CheeseSLSLootTracker.inventory[tonumber(itemId)] then
+				-- trading "lost" the second (and other items). Seems to be a lag issue on clicking into trade window.
+				if cntTrades > 0 then
+					-- so on second (and later) item, wait a second to put into trade
+					local continueTime = time()+1 
+					while ( time() <= continueTime ) do
+						-- wait a sec
+					end
+				end
+
 				local inv = CheeseSLSLootTracker.inventory[tonumber(itemId)]
 				CheeseSLSLootTracker:Debug("Trading " .. itemLink .. " (" .. tostring(itemId) .. ") from inventory " .. tostring(inv["bag"]) .. "/" .. tostring(inv["slot"]) .. " to " .. loot["winner"])
 				ClearCursor()
 				C_Container.PickupContainerItem(inv["bag"], inv["slot"])
 				local tradePos = TradeFrame_GetAvailableSlot()
+				CheeseSLSLootTracker:Debug("Use next available slot: " .. tradePos)
 				if tradePos ~= nil then
 					ClickTradeButton(tradePos)
+					cntTrades = cntTrades + 1
 				end
+
 			end
 		end
 
