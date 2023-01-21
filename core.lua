@@ -148,6 +148,7 @@ function CheeseSLSLootTracker:OnInitialize()
 	CheeseSLSLootTracker.commUUIDseen = {}
 	CheeseSLSLootTracker.winnerLabels = {}
 	CheeseSLSLootTracker.bookedButtons = {}
+	CheeseSLSLootTracker.lootTrackFrameButtons = {}
 
 	CheeseSLSLootTracker.GetItemInfoQueue = {}
 
