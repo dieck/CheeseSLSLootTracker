@@ -220,22 +220,22 @@ function CheeseSLSLootTracker:CacheTradeableInventoryPosition()
 
 	for bag = BACKPACK_CONTAINER, NUM_BAG_SLOTS do
 		for slot = 1, C_Container.GetContainerNumSlots(bag) do
-			local icon, itemCount, _locked, quality, readable, lootable, itemLink, isFiltered, noValue, itemID = C_Container.GetContainerItemInfo(bag, slot)
-			if itemID then
+		
+			local item = C_Container.GetContainerItemInfo(bag, slot)
+			if item then
 				tip:SetOwner(UIParent, "ANCHOR_NONE")
 				tip:SetBagItem(bag, slot)
 				tip:Show()
-				
-				data = C_TooltipInfo.GetBagItem(bag, slot)
-
+	
+--				data = C_TooltipInfo.GetBagItem(bag, slot)
 				
 				for i = 1,tip:NumLines() do
 					if (string.find(_G["TooltipTextLeft"..i]:GetText(), ITEM_BIND_ON_EQUIP)) then
 						-- is BoE
-						CheeseSLSLootTracker.inventory[tonumber(itemID)] = { bag = bag, slot = slot }
+						CheeseSLSLootTracker.inventory[tonumber(item["itemID"])] = { bag = bag, slot = slot }
 					elseif (string.find(_G["TooltipTextLeft"..i]:GetText(), string.format(BIND_TRADE_TIME_REMAINING, ".*"))) then
 						-- is tradeable (within timer)
-						CheeseSLSLootTracker.inventory[tonumber(itemID)] = { bag = bag, slot = slot }
+						CheeseSLSLootTracker.inventory[tonumber(item["itemID"])] = { bag = bag, slot = slot }
 					end
 				end
 				tip:Hide()
@@ -288,7 +288,7 @@ function CheeseSLSLootTracker:TRADE_SHOW()
 				local inv = CheeseSLSLootTracker.inventory[tonumber(itemId)]
 				CheeseSLSLootTracker:Debug("Trading " .. itemLink .. " (" .. tostring(itemId) .. ") from inventory " .. tostring(inv["bag"]) .. "/" .. tostring(inv["slot"]) .. " to " .. loot["winner"])
 				ClearCursor()
-				PickupContainerItem(inv["bag"], inv["slot"])
+				C_Container.PickupContainerItem(inv["bag"], inv["slot"])
 				local tradePos = TradeFrame_GetAvailableSlot()
 				if tradePos ~= nil then
 					ClickTradeButton(tradePos)
