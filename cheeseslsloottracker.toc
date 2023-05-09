@@ -2,7 +2,7 @@
 ## Title: CheeseSLSLootTracker
 ## Notes: Loot Tracker Addon for CheeseSLS usage
 ## Author: dieck
-## Version: 20230118
+## Version: 20230509
 ## SavedVariables: CheeseSLSLootTrackerDB
 
 embeds.xml

@@ -228,7 +228,7 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 									local itemId = itemset[2]
 									if (itemId) and (tonumber(itemId)) then
 										if itemIdsToAdd[tonumber(itemId)] then
-											itemIdsToAdd[tonumber(itemId)] = itemIdsToAdd[tonumber(itemId)] .. ", ".. encounter["name"]
+											itemIdsToAdd[tonumber(itemId)] = "(multiple)"
 										else 
 											itemIdsToAdd[tonumber(itemId)] = encounter["name"]
 										end
@@ -244,6 +244,9 @@ function CheeseSLSLootTracker:ChatCommand(inc)
 			for itemId, encName in pairs(itemIdsToAdd) do
 				CheeseSLSLootTracker:QueueGetItemInfo(itemId, fctCallback, itemId, encName)
 			end
+			
+			CheeseSLSLootTracker:Print("CheeseSLSLootTracker added " .. CheeseSLSLootTracker:htlen(ht) .. " loot items from Ulduar. Opening next loot window will take some time.")
+			
 			
 		end
 
