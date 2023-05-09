@@ -17,11 +17,12 @@ function CheeseSLSLootTracker:addLoot(itemLink, playerName, queueTime, uuid, win
 		end
 	end
 
-	-- avoid doublettes within +-5sec. Yes, this might be a problem if dual items drop, but could only be T tokens anyway.
+	-- avoid doublettes within +- $VARIANCE sec. Yes, this might be a problem if dual items drop, but so far could only be T tokens anyway.
+	local variance = 10
 	local isKnown = false
 	for key,val in pairs(CheeseSLSLootTracker.db.profile.loothistory) do
 		if tonumber(val["itemId"]) == tonumber(itemId) and tostring(val["playerName"]) == tostring(playerName) then
-			if tonumber(val["queueTime"]) <= tonumber(queueTime)+5 and tonumber(val["queueTime"]) >= tonumber(queueTime)-5 then
+			if tonumber(val["queueTime"]) <= tonumber(queueTime)+variance and tonumber(val["queueTime"]) >= tonumber(queueTime)-variance then
 				CheeseSLSLootTracker:Debug("Asked to queue loot but found this item already as " .. val["uuid"])
 
 				-- if times do not match exactly, re-book item (some lines down), so all will match everywhere
