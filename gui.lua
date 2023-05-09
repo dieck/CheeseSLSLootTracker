@@ -348,9 +348,9 @@ function CheeseSLSLootTracker:createLootTrackFrame()
 				btnBooked:SetRelativeWidth(relativewidth["booked"])
 				btnBooked:SetDisabled(not (loot["winner"]))
 				btnBooked:SetCallback("OnClick", function(widget)
-					local user = btnBooked:GetUserData("winner")
+					local user = btnBooked:GetUserData("winner") or ""
 					local dkp = btnBooked:GetUserData("winnerdkp") or 0
-					local itemlink = btnBooked:GetUserData("itemLink")
+					local itemlink = btnBooked:GetUserData("itemLink") or "\124cffff8000\124Hitem:199914::::::::80:::::\124h[Glowing Pebble]\124h\124r";
 					CheeseSLS:createRequestDialogFrame(user, -tonumber(dkp), itemlink)
 					CheeseSLSLootTracker:Debug("Calling CheeseSLS:createRequestDialogFrame for user " .. user .. ", dkp " .. dkp .. ", itemlink " .. itemlink)
 				end)
